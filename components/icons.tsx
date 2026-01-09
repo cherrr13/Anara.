@@ -124,44 +124,62 @@ export const GratefulMoodIcon: React.FC<IconProps> = ({ className }) => (
 export const AnaraLogo: React.FC<IconProps> = ({ className, style }) => (
     <svg className={className} style={style} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-            <linearGradient id="petalGradient" x1="50" y1="50" x2="50" y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#FCE7F3" />
-                <stop offset="100%" stopColor="#EC4899" />
-            </linearGradient>
-            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="3" result="blur" />
+            <radialGradient id="sakuraPetalGrad" cx="0.5" cy="0.5" r="0.65" fx="0.5" fy="0.8">
+                <stop offset="0%" stopColor="#FFF1F2" /> 
+                <stop offset="40%" stopColor="#FECDD3" /> 
+                <stop offset="100%" stopColor="#FB7185" />
+            </radialGradient>
+            <radialGradient id="sakuraCenterGrad" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0%" stopColor="#FDE047" />
+                <stop offset="100%" stopColor="#F59E0B" />
+            </radialGradient>
+            <filter id="sakuraGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
         </defs>
         
-        <g filter="url(#glow)">
-             {/* 5-Petal Flower */}
+        <g filter="url(#sakuraGlow)">
+             {/* 5-Petal Sakura Flower */}
             {[0, 72, 144, 216, 288].map((angle) => (
                 <path
                     key={angle}
-                    d="M50 50 Q35 25 50 5 Q65 25 50 50"
-                    fill="url(#petalGradient)"
-                    stroke="#FBCFE8"
-                    strokeWidth="1"
+                    d="M50 50 C 30 35 15 15 35 6 Q 50 16 65 6 C 85 15 70 35 50 50" 
+                    fill="url(#sakuraPetalGrad)"
+                    stroke="#F43F5E"
+                    strokeWidth="0.5"
+                    strokeOpacity="0.3"
                     transform={`rotate(${angle} 50 50)`}
-                    opacity="0.9"
-                />
-            ))}
-            {/* Inner Petals for depth */}
-             {[36, 108, 180, 252, 324].map((angle) => (
-                <path
-                    key={angle}
-                    d="M50 50 Q40 35 50 25 Q60 35 50 50"
-                    fill="#F9A8D4"
-                    transform={`rotate(${angle} 50 50)`}
-                    opacity="0.7"
                 />
             ))}
         </g>
         
+        {/* Stamens */}
+        <g>
+             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+                <line 
+                    key={angle}
+                    x1="50" y1="50" x2="50" y2="34" 
+                    stroke="#BE123C" 
+                    strokeWidth="1" 
+                    strokeLinecap="round"
+                    transform={`rotate(${angle + 22.5} 50 50)`}
+                    opacity="0.6"
+                />
+            ))}
+             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+                 <circle
+                    key={angle}
+                    cx="50" cy="34" r="1.5"
+                    fill="url(#sakuraCenterGrad)"
+                    transform={`rotate(${angle + 22.5} 50 50)`}
+                 />
+            ))}
+        </g>
+
         {/* Center */}
-        <circle cx="50" cy="50" r="6" fill="#FDF2F8" stroke="#EC4899" strokeWidth="2" />
-        <circle cx="50" cy="50" r="3" fill="#F472B6" />
+        <circle cx="50" cy="50" r="4" fill="#F43F5E" opacity="0.8" />
+        <circle cx="50" cy="50" r="2" fill="#FFF1F2" />
     </svg>
 );
 
@@ -219,6 +237,15 @@ export const PeriodIcon: React.FC<IconProps> = ({ className }) => (
     </svg>
 );
 
+export const SleepTrackerIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke="currentColor" fill="currentColor" opacity="0.3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 9l2-2m-2 2l2 2m-2-2h-3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 5l1-1m-1 1l1 1m-1-1h-2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    </svg>
+);
+
 export const GardenIcon: React.FC<IconProps> = ({ className }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path d="M12 8.25c-2.488 0-4.5 2.012-4.5 4.5s2.012 4.5 4.5 4.5 4.5-2.012 4.5-4.5-2.012-4.5-4.5-4.5z" stroke="none" fill="currentColor" opacity="0.2"/>
@@ -230,6 +257,12 @@ export const SettingsIcon: React.FC<IconProps> = ({ className }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066 2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+export const MenuGridIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
     </svg>
 );
 
@@ -260,6 +293,26 @@ export const BackIcon: React.FC<IconProps> = ({ className }) => (
 export const CheckIcon: React.FC<IconProps> = ({ className }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+);
+
+export const StarIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+    </svg>
+);
+
+// --- PASSWORD VISIBILITY ICONS ---
+export const EyeIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+);
+
+export const EyeOffIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
     </svg>
 );
 
@@ -607,6 +660,18 @@ export const MoonIcon: React.FC<IconProps> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
     </svg>
 );
+export const MoonStarIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+         <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+         <path d="M19 2L19.5 3.5L21 4L19.5 4.5L19 6L18.5 4.5L17 4L18.5 3.5L19 2Z" fill="currentColor"/>
+    </svg>
+);
+export const SunIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+);
 
 // --- NEW ICONS FOR SHARE & CLOSE ---
 export const ShareIcon: React.FC<IconProps> = ({ className }) => (
@@ -618,5 +683,32 @@ export const ShareIcon: React.FC<IconProps> = ({ className }) => (
 export const XMarkIcon: React.FC<IconProps> = ({ className }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+// --- EDITOR ICONS ---
+export const RotateLeftIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a5 5 0 015 5v6M3 10l6 6m-6-6l6-6" />
+    </svg>
+);
+
+export const CropIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" opacity="0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" opacity="0"/>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9H9a2 2 0 00-2 2v8a2 2 0 002 2zM3 7h10M21 17H11" />
+    </svg>
+);
+
+export const WandIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+    </svg>
+);
+
+export const SaveIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );

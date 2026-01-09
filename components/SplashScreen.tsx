@@ -8,7 +8,7 @@ const SplashScreen: React.FC = () => {
             <h1 className="text-4xl font-bold text-[#E18AAA]" style={{fontFamily: "'Playfair Display', serif"}}>
                 Anara
             </h1>
-            <p className="text-[#8D7F85] mt-2">Your wellness companion.</p>
+            <p className="text-[#8D7F85] mt-2">Your Blooming Friend</p>
         </div>
     );
 };

@@ -5,8 +5,10 @@ export enum Tab {
     Habit = 'HABIT',
     Journal = 'JOURNAL',
     Period = 'PERIOD',
+    Sleep = 'SLEEP',
     Garden = 'GARDEN',
     Settings = 'SETTINGS',
+    Menu = 'MENU',
 }
 
 export interface User {
@@ -14,6 +16,7 @@ export interface User {
     email: string;
     profilePicture?: string | null;
     isNewUser?: boolean;
+    isVerified?: boolean;
 }
 
 export interface MoodEntry {
@@ -22,6 +25,7 @@ export interface MoodEntry {
     activities: string[];
     note: string;
     date: Date;
+    tags?: string[];
 }
 
 export interface Habit {
@@ -66,6 +70,16 @@ export interface JournalEntry {
     }[];
 }
 
+export interface SleepEntry {
+    id: string;
+    date: Date; // The date the sleep session ended (usually "today")
+    bedTime: string; // HH:mm format
+    wakeTime: string; // HH:mm format
+    durationHours: number;
+    quality: 'Excellent' | 'Good' | 'Fair' | 'Poor';
+    notes?: string;
+}
+
 // Renamed PeriodDay to be more generic, though it's not used by the new tracker.
 export interface CalendarDay {
     date: Date;
@@ -95,6 +109,5 @@ export interface DayLog {
 }
 
 export interface GardenDecor {
-    activePot: string;
     activeBackground: string;
 }

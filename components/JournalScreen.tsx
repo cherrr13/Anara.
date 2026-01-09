@@ -1,478 +1,346 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
-import type { JournalEntry, MoodEntry } from '../types';
-import { DeleteIcon, MediaIcon, EditIcon, SparklesIcon, ShareIcon, XMarkIcon } from './icons';
+import React, { useState, useRef, useEffect } from 'react';
+import { GoogleGenAI } from "@google/genai";
+import type { JournalEntry, MoodEntry, User, Cycle, DayLog } from '../types';
+import { 
+    DeleteIcon, SparklesIcon, XMarkIcon, AddIcon, CheckIcon, 
+    JournalIcon, MoonIcon, StarIcon, GratefulMoodIcon, HappyMoodIcon, 
+    CalmMoodIcon, TiredMoodIcon, FrustratedMoodIcon, SadMoodIcon, 
+    MediaIcon, TrashIcon, BackIcon 
+} from './icons.tsx';
 
 interface JournalScreenProps {
     entries: JournalEntry[];
     setEntries: (entries: JournalEntry[]) => void;
+    moodHistory?: MoodEntry[];
+    user: User | null;
+    cycleData?: { cycles: Cycle[], dayLogs: Record<string, DayLog> };
 }
 
-const moods: MoodEntry['mood'][] = ['Happy', 'Calm', 'Tired', 'Frustrated', 'Sad', 'Grateful'];
+const MOODS = [
+    { name: 'Happy', Icon: HappyMoodIcon }, { name: 'Calm', Icon: CalmMoodIcon }, { name: 'Tired', Icon: TiredMoodIcon },
+    { name: 'Frustrated', Icon: FrustratedMoodIcon }, { name: 'Sad', Icon: SadMoodIcon }, { name: 'Grateful', Icon: GratefulMoodIcon }
+] as const;
 
-const allWritingPrompts = [
-    'What made you smile today?',
-    'What are you grateful for?',
-    'What challenged you today?',
-    'How did you take care of yourself?',
-    'What are you looking forward to?',
-    'What did you learn today?',
-    'How are you feeling right now?',
-    'What would make tomorrow better?',
-    'Who made a positive impact on your day?',
-    'Describe a moment of peace you had.',
-    'What is one goal you are working towards?',
-    'Write about a small victory.',
-    'What energy do you want to bring into tomorrow?',
-    'If you could change one thing about today, what would it be?',
-    'What does "wellness" mean to you right now?',
-    'Describe your ideal morning routine.',
-    'What is a habit you want to build?',
-    'Reflect on a recent success.',
-    'What brings you comfort when you are stressed?',
-    'Write a letter to your future self.',
-    'What is something beautiful you saw recently?',
-];
+// --- MEDIA LIGHTBOX COMPONENT ---
+interface MediaLightboxProps {
+    media: { type: 'image' | 'video'; url: string };
+    onClose: () => void;
+}
 
-const JournalScreen: React.FC<JournalScreenProps> = ({ entries, setEntries }) => {
+const MediaLightbox: React.FC<MediaLightboxProps> = ({ media, onClose }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const toggleFullScreen = () => {
+        if (!containerRef.current) return;
+        if (!document.fullscreenElement) {
+            containerRef.current.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [onClose]);
+
+    return (
+        <div 
+            ref={containerRef}
+            className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center p-4 sm:p-8 animate-fade-in"
+            onClick={onClose}
+        >
+            <div className="absolute top-6 right-6 flex items-center gap-4 z-[110]">
+                {media.type === 'video' && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); toggleFullScreen(); }}
+                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90"
+                        title="Toggle Fullscreen"
+                    >
+                        <SparklesIcon className="w-6 h-6" />
+                    </button>
+                )}
+                <button 
+                    onClick={onClose}
+                    className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90"
+                >
+                    <XMarkIcon className="w-6 h-6" />
+                </button>
+            </div>
+
+            <div 
+                className="relative w-full h-full flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {media.type === 'image' ? (
+                    <img 
+                        src={media.url} 
+                        alt="Journal Detail" 
+                        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl animate-pop"
+                    />
+                ) : (
+                    <div className="relative w-full h-full flex items-center justify-center group/video">
+                        <video 
+                            ref={videoRef}
+                            src={media.url} 
+                            controls
+                            autoPlay
+                            className="max-w-full max-h-full rounded-xl shadow-2xl bg-black"
+                        />
+                    </div>
+                )}
+            </div>
+            
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] font-bold uppercase tracking-[0.3em] pointer-events-none">
+                {media.type === 'video' ? 'Video Playback Active' : 'Image View Active'}
+            </div>
+        </div>
+    );
+};
+
+const JournalScreen: React.FC<JournalScreenProps> = ({ entries, setEntries, moodHistory = [], user }) => {
     const [activeTab, setActiveTab] = useState<'write' | 'entries'>('write');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [linkedMood, setLinkedMood] = useState<MoodEntry['mood'] | null>(null);
-    const [tags, setTags] = useState<string[]>([]);
-    const [tagInput, setTagInput] = useState('');
-    // New: support multiple attachments
-    const [attachments, setAttachments] = useState<{ type: 'image' | 'video'; url: string }[]>([]);
-    const [displayedPrompts, setDisplayedPrompts] = useState<string[]>([]);
-    const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
-    const [fullscreenMedia, setFullscreenMedia] = useState<{ type: 'image' | 'video'; url: string } | null>(null);
+    const [attachments, setAttachments] = useState<{type: 'image'|'video', url: string}[]>([]);
+    const [isProcessingMedia, setIsProcessingMedia] = useState(false);
+    const [selectedMedia, setSelectedMedia] = useState<{type: 'image'|'video', url: string} | null>(null);
     
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [naraPrompt, setNaraPrompt] = useState<string | null>(null);
+    
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Initialize AI Client
-    const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.API_KEY as string }), []);
-
-    // Function to get a set of random prompts
-    const getRandomPrompts = () => {
-        const shuffled = [...allWritingPrompts].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, 4);
-    };
-
-    // Initialize prompts on mount
-    useEffect(() => {
-        setDisplayedPrompts(getRandomPrompts());
-    }, []);
-
-    const handleShufflePrompts = () => {
-        setDisplayedPrompts(getRandomPrompts());
-    };
-
-    const handleGenerateAiPrompts = async () => {
-        setIsLoadingPrompts(true);
+    const generateNaraPrompt = async () => {
+        setIsGenerating(true);
         try {
-            // Context gathering - richer context
-            const recentEntries = entries.slice(0, 5).map(e => 
-                `[${e.date.toLocaleDateString()}] Mood: ${e.linkedMood || 'None'} - ${e.content.substring(0, 150)}...`
-            ).join('\n');
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            const recentMoods = moodHistory.slice(0, 3).map(m => m.mood).join(', ');
+            const lastEntrySnippet = entries[0]?.content.substring(0, 100) || "No entries yet.";
             
-            const prompt = `
-                You are an empathetic wellness companion. Generate 4 personalized journaling prompts based on the user's current state.
-
-                User Context:
-                - Current Selected Mood: ${linkedMood || 'Not specified (Neutral/Unknown)'}
-                - Recent Journal Entries (for context on themes, do not repeat these):
-                ${recentEntries || 'No recent entries.'}
-
-                Guidelines for Prompts:
-                1. **If Mood is Negative (Sad, Tired, Frustrated):** Focus on "Processing" and "Self-Compassion". Prompts should be gentle, validating, and low-pressure. Example themes: identifying triggers, permission to rest, small comforts.
-                2. **If Mood is Positive (Happy, Calm, Grateful):** Focus on "Savoring" and "Growth". Prompts should help the user internalize this good feeling or plan for the future.
-                3. **If Mood is Unspecified:** Provide a balanced mix including one gratitude prompt, one self-reflection prompt, and one "present moment" check-in.
-                4. **Tone:** Always warm, non-judgmental, and supportive.
-                
-                Format:
-                Return purely a JSON array of strings.
-            `;
-
+            const prompt = `User: ${user?.name}. Context: Recent Moods: ${recentMoods || 'Neutral'}. Last Journal Context: ${lastEntrySnippet}. Generate ONE deeply personal, unique journaling prompt to help the user process their current emotions. One sentence only. No fluff.`;
+            
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3-flash-preview',
                 contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING }
-                    }
-                }
+                config: { maxOutputTokens: 100, systemInstruction: "You are Nara, a world-class journaling guide who crafts soulful prompts." }
             });
-
-            if (response.text) {
-                const newPrompts = JSON.parse(response.text);
-                if (Array.isArray(newPrompts) && newPrompts.length > 0) {
-                    setDisplayedPrompts(newPrompts.slice(0, 4));
-                }
-            }
-        } catch (error) {
-            console.error("Failed to generate AI prompts", error);
-            // Fallback to shuffle if AI fails
-            handleShufflePrompts();
-        } finally {
-            setIsLoadingPrompts(false);
-        }
+            if (response.text) setNaraPrompt(response.text.trim());
+        } catch { setNaraPrompt("What is your heart telling you today?"); }
+        finally { setIsGenerating(false); }
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files) return;
-
-        // Append new files to existing attachments
-        Array.from(files).forEach((file: File) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const url = e.target?.result as string;
-                const type = file.type.startsWith('video/') ? 'video' : 'image';
-                setAttachments(prev => [...prev, { type, url }]);
-            };
-            reader.readAsDataURL(file);
-        });
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []) as File[];
+        if (files.length === 0) return;
         
-        // Reset input so the same file can be selected again if needed
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-    
-    const handleRemoveAttachment = (indexToRemove: number) => {
-        setAttachments(prev => prev.filter((_, index) => index !== indexToRemove));
-    };
+        setIsProcessingMedia(true);
+        const filePromises = files.map(file => {
+            return new Promise<{type: 'image'|'video', url: string}>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const url = event.target?.result as string;
+                    const type = file.type.startsWith('video') ? 'video' : 'image';
+                    resolve({ type, url });
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        });
 
-    const handleUploadClick = async () => {
-         fileInputRef.current?.click();
-    };
+        Promise.all(filePromises).then(newMedia => {
+            setAttachments(prev => [...prev, ...newMedia]);
+            setIsProcessingMedia(false);
+        }).catch(() => setIsProcessingMedia(false));
 
-    const handleAddTag = () => {
-        const trimmedTag = tagInput.trim();
-        if (trimmedTag && !tags.includes(trimmedTag)) {
-            setTags([...tags, trimmedTag]);
-        }
-        setTagInput('');
-    };
-
-    const handleRemoveTag = (tagToRemove: string) => {
-        setTags(tags.filter(tag => tag !== tagToRemove));
-    };
-    
-    const handleClearForm = () => {
-        setTitle('');
-        setContent('');
-        setLinkedMood(null);
-        setTags([]);
-        setTagInput('');
-        setAttachments([]);
-    }
-
-    const handleSaveEntry = () => {
-        if (content.trim() === '' && attachments.length === 0) return; // Prevent saving completely empty entries
-
-        const newEntry: JournalEntry = {
-            id: new Date().toISOString(),
-            title: title.trim() ? title.trim() : undefined,
-            content: content.trim(),
-            date: new Date(),
-            linkedMood: linkedMood ?? undefined,
-            tags: tags,
-            attachments: attachments,
-        };
-
-        if ('vibrate' in navigator) {
-            navigator.vibrate(100);
-        }
-
-        setEntries([newEntry, ...entries]);
-        handleClearForm();
-        setActiveTab('entries');
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const handlePromptClick = (prompt: string) => {
-        setTitle(prompt);
-        textareaRef.current?.focus();
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
     };
-    
-    const handleShare = async (entry: JournalEntry) => {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: entry.title || 'My Journal Entry',
-                    text: `${entry.title ? entry.title + '\n\n' : ''}${entry.content}`,
-                });
-            } catch (error) {
-                console.log('Error sharing', error);
-            }
-        } else {
-            alert("Sharing is not supported on this device/browser.");
-        }
+
+    const handleSave = () => {
+        if (!content.trim()) return;
+        setEntries([{ 
+            id: Date.now().toString(), 
+            title: title || 'Journal Entry', 
+            content, 
+            date: new Date(), 
+            linkedMood: linkedMood ?? undefined, 
+            attachments
+        }, ...entries]);
+        setTitle(''); setContent(''); setLinkedMood(null); setAttachments([]); setActiveTab('entries');
+        if ('vibrate' in navigator) navigator.vibrate(50);
     };
-    
-    const moodColors: Record<MoodEntry['mood'], string> = { Happy: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300', Calm: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300', Sad: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', Tired: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300', Frustrated: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300', Grateful: 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300' };
 
     return (
-        <div>
-            {/* Fullscreen Media Modal */}
-            {fullscreenMedia && (
-                <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setFullscreenMedia(null)}>
-                    <button onClick={() => setFullscreenMedia(null)} className="absolute top-4 right-4 text-white bg-gray-800/50 p-2 rounded-full hover:bg-gray-700 transition">
-                        <XMarkIcon className="w-8 h-8" />
-                    </button>
-                    <div className="max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
-                        {fullscreenMedia.type === 'image' ? (
-                            <img src={fullscreenMedia.url} alt="Fullscreen" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
-                        ) : (
-                            <video src={fullscreenMedia.url} controls autoPlay className="max-w-full max-h-[90vh] rounded-lg shadow-2xl bg-black" />
+        <div className="space-y-6 pb-20 max-w-2xl mx-auto">
+            {selectedMedia && (
+                <MediaLightbox 
+                    media={selectedMedia} 
+                    onClose={() => setSelectedMedia(null)} 
+                />
+            )}
+
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold font-serif text-[#4B4246] dark:text-slate-100">Journal</h2>
+                    <p className="text-base font-sans text-[#8D7F85] dark:text-slate-400 mt-1">A sanctuary for your thoughts and growth.</p>
+                </div>
+                <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl border border-gray-200 dark:border-slate-700 w-full sm:w-auto shadow-sm">
+                    <button onClick={() => setActiveTab('write')} className={`flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold font-sans transition-all ${activeTab === 'write' ? 'bg-white dark:bg-slate-700 text-[#E18AAA] shadow-md' : 'text-gray-500'}`}>New Entry</button>
+                    <button onClick={() => setActiveTab('entries')} className={`flex-1 sm:flex-none px-6 py-2 rounded-xl text-sm font-bold font-sans transition-all ${activeTab === 'entries' ? 'bg-white dark:bg-slate-700 text-[#E18AAA] shadow-md' : 'text-gray-500'}`}>History</button>
+                </div>
+            </div>
+
+            {activeTab === 'write' ? (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Nara Prompt Card */}
+                    <div className="bg-gradient-to-br from-[#E0D9FE] to-[#FCE7F3] dark:from-indigo-900/40 dark:to-purple-900/40 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-2">
+                                <SparklesIcon className="w-5 h-5 text-purple-600" />
+                                <h3 className="text-xl font-bold font-serif text-purple-900 dark:text-purple-100">Nara's AI Spark</h3>
+                            </div>
+                            <button onClick={generateNaraPrompt} disabled={isGenerating} className="text-[10px] font-bold font-sans uppercase tracking-widest px-4 py-2 bg-white dark:bg-slate-800 text-purple-600 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95">
+                                {isGenerating ? 'Igniting...' : (naraPrompt ? 'Refresh Spark' : 'Get Spark')}
+                            </button>
+                        </div>
+                        {naraPrompt && (
+                            <button onClick={() => { setTitle(naraPrompt); textareaRef.current?.focus(); }} className="text-left w-full p-6 bg-white/40 dark:bg-slate-800/40 rounded-3xl border border-white/50 hover:bg-white/60 dark:hover:bg-slate-800 transition-all">
+                                <p className="text-lg font-medium font-serif italic text-purple-900 dark:text-purple-100">"{naraPrompt}"</p>
+                            </button>
                         )}
                     </div>
-                </div>
-            )}
 
-            <div>
-                <h2 className="text-2xl font-bold text-[#4B4246] dark:text-slate-100" style={{ fontFamily: "'Playfair Display', serif" }}>Your Journal</h2>
-                <p className="text-[#8D7F85] dark:text-slate-400">Express yourself and reflect on your day</p>
-            </div>
-
-            <div className="flex border-b border-pink-100 dark:border-slate-700 mt-4 mb-6">
-                <button onClick={() => setActiveTab('write')} className={`py-2 px-4 text-sm font-semibold relative ${activeTab === 'write' ? 'text-[#E18AAA] dark:text-pink-400' : 'text-gray-500 dark:text-slate-400'}`}>
-                    Write
-                    {activeTab === 'write' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E18AAA] dark:bg-pink-400 rounded-full"></div>}
-                </button>
-                <button onClick={() => setActiveTab('entries')} className={`py-2 px-4 text-sm font-semibold relative ${activeTab === 'entries' ? 'text-[#E18AAA] dark:text-pink-400' : 'text-gray-500 dark:text-slate-400'}`}>
-                    Entries ({entries.length})
-                    {activeTab === 'entries' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E18AAA] dark:bg-pink-400 rounded-full"></div>}
-                </button>
-            </div>
-
-            {activeTab === 'write' && (
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 space-y-6 animate-fade-in">
-                    <div>
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-2">
-                             <h3 className="font-bold text-gray-700 dark:text-slate-200">Daily Prompts</h3>
-                             <div className="flex gap-2">
-                                <button 
-                                    onClick={handleGenerateAiPrompts} 
-                                    disabled={isLoadingPrompts}
-                                    className="text-xs flex items-center gap-1 text-white font-semibold bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 px-3 py-1.5 rounded-full transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    {isLoadingPrompts ? (
-                                        <>
-                                            <div className="w-3 h-3 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
-                                            Generating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <SparklesIcon className="w-3 h-3"/> AI Inspire
-                                        </>
-                                    )}
-                                </button>
-                                <button 
-                                    onClick={handleShufflePrompts} 
-                                    disabled={isLoadingPrompts}
-                                    className="text-xs flex items-center gap-1 text-gray-600 dark:text-slate-300 font-semibold bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 px-3 py-1.5 rounded-full transition-colors"
-                                >
-                                    Shuffle
-                                </button>
-                             </div>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-3">Need inspiration? Select a mood below for personalized ideas, or tap a question.</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {displayedPrompts.map((prompt, index) => (
-                                <button key={index} onClick={() => handlePromptClick(prompt)} className="text-left text-sm text-gray-600 dark:text-slate-300 bg-rose-50 dark:bg-slate-700 p-3 rounded-lg hover:bg-rose-100 dark:hover:bg-slate-600 transition border border-transparent hover:border-rose-200 dark:hover:border-slate-500">
-                                    {prompt}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    
-                    <div className="relative pt-2">
-                         <div className="flex items-center justify-between mb-2">
-                             <label className="font-bold text-gray-700 dark:text-slate-200 text-lg">Title</label>
-                             <span className="text-xs text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">Custom or from prompt</span>
-                         </div>
-                        <div className="relative">
-                             <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="E.g., My Morning Routine"
-                                className="w-full p-4 pl-10 border-2 border-pink-100 rounded-xl focus:ring-4 focus:ring-[#F4ABC4]/20 focus:border-[#F4ABC4] transition bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-slate-200 dark:border-slate-600 dark:placeholder-slate-400 font-semibold"
-                            />
-                            <EditIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="font-bold text-gray-700 dark:text-slate-200 mb-2 block">Your thoughts</label>
-                        <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="Start writing..." rows={6} className="w-full p-3 border border-pink-100 rounded-lg focus:ring-2 focus:ring-[#F4ABC4] transition bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-slate-200 dark:border-slate-600 dark:placeholder-slate-400"></textarea>
-                    </div>
-
-                    <div>
-                        <h3 className="font-bold text-gray-700 dark:text-slate-200 mb-3">Link to mood <span className="font-normal text-gray-500 dark:text-slate-400">(select to personalize AI prompts)</span></h3>
-                        <div className="flex flex-wrap gap-2">
-                            {moods.map(mood => (
-                                <button key={mood} onClick={() => setLinkedMood(mood)} className={`px-3 py-1 text-sm rounded-full border-2 transition-colors ${linkedMood === mood ? 'bg-[#E0D9FE] border-[#C4B5FD] text-indigo-800 dark:bg-indigo-900/50 dark:border-indigo-700 dark:text-indigo-300' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-600'}`}>
-                                    {mood}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 className="font-bold text-gray-700 dark:text-slate-200 mb-3">Attachments <span className="font-normal text-gray-500 dark:text-slate-400">(photos & videos)</span></h3>
+                    {/* Main Editor */}
+                    <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 shadow-2xl border-t-[6px] border-[#E18AAA] dark:border-pink-900">
+                        <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="A title for this memory..." className="w-full text-2xl font-bold font-serif p-2 bg-transparent border-b border-gray-100 dark:border-slate-700 outline-none mb-6 dark:text-white placeholder-gray-300" />
+                        <textarea ref={textareaRef} value={content} onChange={e => setContent(e.target.value)} placeholder="What's blooming in your mind today?" className="w-full h-80 bg-transparent outline-none dark:text-slate-200 text-lg font-sans leading-relaxed resize-none scrollbar-thin" />
                         
-                        {/* Attachment Grid */}
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
-                            {attachments.map((att, index) => (
-                                <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-slate-600 bg-gray-100 dark:bg-slate-700">
-                                    {att.type === 'image' ? (
-                                        <img src={att.url} alt={`Attachment ${index}`} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <video src={att.url} className="w-full h-full object-cover bg-black" />
-                                    )}
-                                    <button
-                                        onClick={() => handleRemoveAttachment(index)}
-                                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
-                                        aria-label="Remove attachment"
-                                    >
-                                        <XMarkIcon className="w-4 h-4" />
+                        {/* Media Tray during Edit */}
+                        {(attachments.length > 0 || isProcessingMedia) && (
+                            <div className="mt-4 flex gap-4 overflow-x-auto pb-6 scrollbar-thin scroll-smooth px-1">
+                                {attachments.map((file, idx) => (
+                                    <div key={idx} className="relative h-32 w-32 flex-shrink-0 rounded-3xl overflow-hidden shadow-lg border border-gray-100 dark:border-slate-700 group ring-4 ring-transparent hover:ring-pink-100 transition-all">
+                                        {file.type === 'image' ? (
+                                            <img src={file.url} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="relative w-full h-full">
+                                                <video src={file.url} className="h-full w-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                    <div className="bg-white/30 backdrop-blur-md p-2 rounded-full">
+                                                        <StarIcon className="w-4 h-4 text-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <button onClick={() => removeAttachment(idx)} className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 p-2 rounded-full text-red-500 shadow-md transform scale-0 group-hover:scale-100 transition-transform hover:bg-red-50">
+                                            <TrashIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {isProcessingMedia && (
+                                    <div className="h-32 w-32 flex-shrink-0 rounded-3xl bg-gray-50 dark:bg-slate-900 flex items-center justify-center animate-pulse border border-dashed border-gray-300">
+                                        <div className="w-6 h-6 border-2 border-pink-400 border-t-transparent rounded-full animate-spin"></div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="mt-8 pt-8 border-t border-gray-100 dark:border-slate-700 space-y-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <p className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-4">Mood Check-in</p>
+                                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                                        {MOODS.map(m => (
+                                            <button key={m.name} onClick={() => setLinkedMood(linkedMood === m.name ? null : m.name)} className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all shrink-0 ${linkedMood === m.name ? 'border-[#E18AAA] bg-pink-50' : 'border-transparent bg-gray-50 dark:bg-slate-900/50'}`}>
+                                                <m.Icon className="w-6 h-6" />
+                                                <span className="text-[8px] font-bold font-sans uppercase dark:text-slate-400">{m.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <button onClick={() => fileInputRef.current?.click()} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-pink-50 dark:bg-slate-700 rounded-2xl text-[#E18AAA] hover:bg-pink-100 transition-all active:scale-95 shadow-sm border border-pink-100 dark:border-slate-600 font-bold text-xs uppercase tracking-widest">
+                                        <MediaIcon className="w-5 h-5" />
+                                        <span>Add Media</span>
+                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleFileUpload} />
                                     </button>
                                 </div>
-                            ))}
-                            
-                            {/* Add Button */}
-                            <button
-                                onClick={handleUploadClick}
-                                className="aspect-square flex flex-col items-center justify-center p-2 border-2 border-dashed border-pink-300 dark:border-slate-600 rounded-xl hover:bg-pink-50 dark:hover:bg-slate-700/50 transition-colors group"
-                            >
-                                <div className="bg-pink-100 dark:bg-slate-700 rounded-full p-2 mb-1 group-hover:scale-110 transition-transform">
-                                     <MediaIcon className="w-6 h-6 text-pink-500 dark:text-slate-400" />
-                                </div>
-                                <span className="text-xs font-semibold text-pink-500 dark:text-slate-400">Add</span>
+                            </div>
+                            <button onClick={handleSave} disabled={!content.trim()} className="w-full bg-[#E18AAA] text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-pink-600 transition-all transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+                                <CheckIcon className="w-5 h-5" /> Save Memory
                             </button>
                         </div>
-
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*,video/*"
-                            multiple
-                            className="hidden"
-                        />
-                    </div>
-
-                    <div>
-                        <h3 className="font-bold text-gray-700 dark:text-slate-200 mb-2">Add tags</h3>
-                         <div className="flex flex-wrap gap-2 mb-2">
-                            {tags.map(tag => (
-                                <div key={tag} className="flex items-center bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 text-sm font-medium px-2 py-1 rounded-full">
-                                    <span>{tag}</span>
-                                    <button onClick={() => handleRemoveTag(tag)} className="ml-1.5 text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white"><DeleteIcon className="w-3 h-3"/></button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex gap-2">
-                            <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => {if(e.key === 'Enter') { e.preventDefault(); handleAddTag();}}} placeholder="Type tag and press Enter..." className="flex-grow p-2 border border-pink-100 rounded-lg focus:ring-2 focus:ring-[#F4ABC4] transition text-sm bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"/>
-                            <button onClick={handleAddTag} className="bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 font-semibold px-4 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 text-sm">Add</button>
-                        </div>
-                    </div>
-                    
-                    <div className="flex justify-end gap-3 pt-2">
-                        <button onClick={handleClearForm} className="font-bold py-2 px-6 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition text-gray-600 dark:text-slate-300">Clear</button>
-                        <button onClick={handleSaveEntry} disabled={!content.trim() && attachments.length === 0} className="bg-[#E18AAA] text-white font-bold py-2 px-8 rounded-lg hover:bg-pink-700 transition disabled:bg-gray-400 disabled:dark:bg-slate-600 transform hover:scale-105">Save Entry</button>
                     </div>
                 </div>
-            )}
-
-            {activeTab === 'entries' && (
-                <div className="space-y-6">
-                    {entries.length > 0 ? entries.map((entry, index) => (
-                        <div 
-                            key={entry.id} 
-                            className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-5 animate-list-item relative"
-                            style={{ animationDelay: `${index * 80}ms` }}
-                        >
-                             {/* Share Button - Absolute positioned */}
-                             <button 
-                                onClick={() => handleShare(entry)}
-                                className="absolute top-5 right-5 p-2 bg-gray-50 dark:bg-slate-700 rounded-full text-gray-500 dark:text-slate-400 hover:bg-pink-50 dark:hover:bg-slate-600 hover:text-pink-500 dark:hover:text-pink-400 transition-colors shadow-sm"
-                                aria-label="Share Entry"
-                            >
-                                <ShareIcon className="w-5 h-5" />
-                            </button>
-
-                            <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">{entry.date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            
-                            {entry.title && (
-                                <h3 className="text-xl font-bold text-[#4B4246] dark:text-slate-100 mb-2 pr-8" style={{ fontFamily: "'Playfair Display', serif" }}>
-                                    {entry.title}
-                                </h3>
-                            )}
-
-                            {entry.linkedMood && (
-                                <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${moodColors[entry.linkedMood]} mb-3`}>
-                                    {entry.linkedMood}
-                                </span>
-                            )}
-                            
-                            <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap mb-4">{entry.content}</p>
-
-                            {/* Attachments Gallery/Carousel */}
-                            {entry.attachments && entry.attachments.length > 0 && (
-                                <div className="mb-4">
-                                    {entry.attachments.length === 1 ? (
-                                        <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-slate-700 cursor-pointer" onClick={() => setFullscreenMedia(entry.attachments![0])}>
-                                             {entry.attachments[0].type === 'image' ? (
-                                                <img src={entry.attachments[0].url} alt="Attachment" className="w-full max-h-80 object-cover hover:opacity-95 transition-opacity" />
-                                            ) : (
-                                                <video src={entry.attachments[0].url} controls className="w-full max-h-80 bg-black" />
-                                            )}
+            ) : (
+                <div className="space-y-4 animate-fade-in">
+                    {entries.length === 0 ? (
+                        <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-dashed border-gray-200 dark:border-slate-700">
+                            <JournalIcon className="w-12 h-12 text-gray-200 dark:text-slate-700 mx-auto mb-4" />
+                            <h4 className="text-xl font-bold font-serif text-gray-400">No memories seeded yet.</h4>
+                        </div>
+                    ) : (
+                        entries.map(entry => (
+                            <div key={entry.id} className="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-gray-100 dark:border-slate-700 relative overflow-hidden group hover:shadow-md transition-shadow">
+                                <div className="absolute top-0 left-0 w-2 h-full bg-[#E18AAA] opacity-40"></div>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100 group-hover:text-[#E18AAA] transition-colors">{entry.title || 'Untitled Memory'}</h3>
                                         </div>
-                                    ) : (
-                                        <div className="flex gap-3 overflow-x-auto pb-4 snap-x scrollbar-hide">
-                                            {entry.attachments.map((att, i) => (
-                                                <div 
-                                                    key={i} 
-                                                    className="flex-shrink-0 w-64 h-48 relative snap-center rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-slate-700 cursor-pointer group"
-                                                    onClick={() => setFullscreenMedia(att)}
-                                                >
-                                                    {att.type === 'image' ? (
-                                                        <img src={att.url} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-black flex items-center justify-center relative">
-                                                            <video src={att.url} className="w-full h-full object-cover opacity-80" />
-                                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                                <div className="bg-white/30 backdrop-blur-md rounded-full p-2">
-                                                                    <div className="w-0 h-0 border-t-8 border-t-transparent border-l-12 border-l-white border-b-8 border-b-transparent ml-1"></div>
-                                                                </div>
+                                        <p className="text-[10px] font-bold font-sans uppercase tracking-widest text-gray-400 dark:text-slate-500">{new Date(entry.date).toLocaleDateString()}</p>
+                                    </div>
+                                    <button onClick={() => setEntries(entries.filter(e => e.id !== entry.id))} className="text-gray-300 hover:text-red-500 p-2 transition-colors"><DeleteIcon className="w-4 h-4" /></button>
+                                </div>
+                                <p className="text-base font-sans text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap mb-6">{entry.content}</p>
+                                
+                                {entry.attachments && entry.attachments.length > 0 && (
+                                    <div className={`grid gap-3 rounded-[2rem] overflow-hidden ${
+                                        entry.attachments.length === 1 ? 'grid-cols-1' : 
+                                        entry.attachments.length === 2 ? 'grid-cols-2' : 
+                                        'grid-cols-2 sm:grid-cols-3'
+                                    }`}>
+                                        {entry.attachments.map((file, i) => (
+                                            <div 
+                                                key={i} 
+                                                className="aspect-square relative group/media cursor-pointer overflow-hidden rounded-2xl"
+                                                onClick={() => setSelectedMedia(file)}
+                                            >
+                                                {file.type === 'image' ? (
+                                                    <img src={file.url} className="h-full w-full object-cover transition-transform group-hover/media:scale-110" loading="lazy" />
+                                                ) : (
+                                                    <div className="relative h-full w-full">
+                                                        <video src={file.url} className="h-full w-full object-cover transition-transform group-hover/media:scale-110" />
+                                                        <div className="absolute inset-0 bg-black/20 group-hover/media:bg-black/40 transition-colors flex items-center justify-center">
+                                                            <div className="bg-white/30 backdrop-blur-md p-3 rounded-full scale-90 group-hover/media:scale-100 transition-transform">
+                                                                <CheckIcon className="w-5 h-5 text-white" />
                                                             </div>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            
-                            {entry.tags && entry.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-2 pt-3 border-t border-pink-50 dark:border-slate-700/50">
-                                    {entry.tags.map(tag => <span key={tag} className="bg-rose-50 text-rose-600 text-xs font-medium px-2 py-1 rounded-full dark:bg-rose-900/30 dark:text-rose-300">#{tag}</span>)}
-                                </div>
-                            )}
-                        </div>
-                    )) : (
-                        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl shadow-lg animate-fade-in">
-                            <p className="text-gray-500 dark:text-slate-400">Your journal is empty.</p>
-                            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Write a new entry to see it here.</p>
-                        </div>
+                                                        <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 rounded-md text-[8px] font-bold text-white uppercase tracking-widest">
+                                                            Video
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 ring-1 ring-inset ring-black/10 pointer-events-none rounded-2xl" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))
                     )}
                 </div>
             )}

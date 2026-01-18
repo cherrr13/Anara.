@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AnaraLogo, EyeIcon, EyeOffIcon } from '../icons';
+import { AnaraLogo, EyeIcon, EyeOffIcon, GoogleIcon, AppleIcon, FacebookIcon } from '../icons';
 
 interface SignInScreenProps {
     onLogin: (email: string, password?: string) => void;
@@ -12,6 +12,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onLogin, onSwitchToSignUp }
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [socialLoading, setSocialLoading] = useState<string | null>(null);
     const [error, setError] = useState('');
 
     const validateEmail = (email: string) => {
@@ -34,93 +35,142 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onLogin, onSwitchToSignUp }
         }
 
         setIsLoading(true);
-        
-        // Small delay to simulate network request and show loading state
         setTimeout(() => {
             try {
                 onLogin(email, password);
             } catch (err: any) {
-                setError(err.message || "Failed to sign in. Please try again.");
+                setError(err.message || "Invalid credentials. Please try again.");
                 setIsLoading(false);
             }
-        }, 600);
+        }, 800);
+    };
+
+    const handleSocialSignIn = (provider: string) => {
+        setSocialLoading(provider);
+        // Simulate OAuth flow
+        setTimeout(() => {
+            onLogin(`${provider.toLowerCase()}.user@example.com`, `${provider}VerifiedSession`);
+        }, 1200);
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] to-[#FCE7F3] dark:from-slate-900 dark:to-slate-800 flex flex-col justify-center items-center p-6" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6" style={{ fontFamily: "'Quicksand', sans-serif" }}>
             <div className="w-full max-w-sm relative">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-24 w-64 h-64 bg-pink-300/20 rounded-full blur-3xl"></div>
+                <div className="absolute -top-12 -left-12 w-64 h-64 bg-pink-400/10 rounded-full blur-[100px] animate-pulse"></div>
+                <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-indigo-400/10 rounded-full blur-[100px] animate-pulse"></div>
                 
                 <div className="text-center mb-10 relative z-10">
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm inline-block mb-4">
+                    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-5 rounded-[2.5rem] shadow-xl inline-block mb-6 border border-white/50 dark:border-slate-700 animate-float">
                          <AnaraLogo className="h-16 w-16 text-[#F4ABC4]"/>
                     </div>
-                    <h1 className="text-4xl font-bold text-[#E18AAA] dark:text-pink-400 mb-2" style={{fontFamily: "'Playfair Display', serif"}}>Welcome Back</h1>
-                    <p className="text-gray-500 dark:text-slate-400">Sign in to continue your journey.</p>
+                    <h1 className="text-4xl font-bold text-[#4B4246] dark:text-slate-100 mb-2 font-serif">Welcome Back</h1>
+                    <p className="text-gray-500 dark:text-slate-400 text-sm font-medium tracking-wide">Enter your sanctuary to continue blooming.</p>
                 </div>
 
-                <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-xl p-8 border border-white/50 dark:border-slate-700 relative z-10">
-                    <form onSubmit={handleLogin} className="space-y-5">
+                <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-2xl rounded-[3rem] shadow-2xl p-8 border border-white dark:border-slate-700/50 relative z-10">
+                    <form onSubmit={handleLogin} className="space-y-6">
                         {error && (
-                            <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl text-sm text-center border border-red-200 dark:border-red-800 animate-pulse">
+                            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300 rounded-2xl text-xs font-bold text-center border border-red-100 dark:border-red-800/50 animate-pop">
                                 {error}
                             </div>
                         )}
-                        <div>
-                            <label className="block text-gray-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider mb-2 ml-1" htmlFor="email">
-                                Email Address
-                            </label>
+                        
+                        <div className="space-y-2">
+                            <label className="block text-gray-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-1">Account Email</label>
                             <input
-                                id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="you@example.com"
-                                required
-                                className="w-full p-4 bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-[#F4ABC4] focus:border-transparent transition dark:text-slate-200 outline-none"
+                                placeholder="name@example.com"
+                                className="w-full p-4 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-pink-100 dark:focus:ring-pink-900/20 focus:border-[#F4ABC4] transition-all dark:text-slate-100 outline-none shadow-sm"
                             />
                         </div>
-                        <div>
-                            <label className="block text-gray-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider mb-2 ml-1" htmlFor="password">
-                                Password
-                            </label>
+
+                        <div className="space-y-2">
+                            <label className="block text-gray-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-1">Password</label>
                             <div className="relative">
                                 <input
-                                    id="password"
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    required
-                                    className="w-full p-4 bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-[#F4ABC4] focus:border-transparent transition dark:text-slate-200 outline-none pr-12"
+                                    className="w-full p-4 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-pink-100 dark:focus:ring-pink-900/20 focus:border-[#F4ABC4] transition-all dark:text-slate-100 outline-none pr-14 shadow-sm"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-[#E18AAA] transition-colors"
                                 >
-                                    {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                                    {showPassword ? <EyeOffIcon className="w-6 h-6" /> : <EyeIcon className="w-6 h-6" />}
                                 </button>
                             </div>
                         </div>
+
                         <button
                             type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-[#E18AAA] text-white font-bold py-4 px-4 rounded-xl hover:bg-pink-600 transition disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            disabled={isLoading || !!socialLoading}
+                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-70 disabled:scale-100 active:scale-95 uppercase tracking-[0.2em] text-xs"
                         >
-                            {isLoading ? 'Signing In...' : 'Sign In'}
+                            {isLoading ? 'Verifying...' : 'Enter Sanctuary'}
                         </button>
                     </form>
+
+                    <div className="relative my-8">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-slate-700"></div></div>
+                        <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest"><span className="bg-white dark:bg-slate-800 px-4 text-gray-300">Or connect with</span></div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            type="button"
+                            onClick={() => handleSocialSignIn('Google')}
+                            disabled={isLoading || !!socialLoading}
+                            className="w-full bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 text-gray-700 dark:text-slate-200 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-slate-600 transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
+                        >
+                            {socialLoading === 'Google' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#4285F4] border-t-transparent"></div> : <GoogleIcon className="w-4 h-4" />}
+                            Google
+                        </button>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handleSocialSignIn('Apple')}
+                                disabled={isLoading || !!socialLoading}
+                                className="bg-black text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-900 transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
+                            >
+                                {socialLoading === 'Apple' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <AppleIcon className="w-4 h-4" />}
+                                Apple
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleSocialSignIn('Facebook')}
+                                disabled={isLoading || !!socialLoading}
+                                className="bg-[#1877F2] text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-[#166fe5] transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
+                            >
+                                {socialLoading === 'Facebook' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <FacebookIcon className="w-4 h-4" />}
+                                Facebook
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <p className="text-center text-gray-500 dark:text-slate-400 text-sm mt-8">
-                    Don't have an account?{' '}
-                    <button onClick={onSwitchToSignUp} className="font-bold text-[#E18AAA] dark:text-pink-400 hover:underline">
-                        Create Account
+                <p className="text-center text-gray-500 dark:text-slate-400 text-sm mt-10">
+                    New to the garden?{' '}
+                    <button onClick={onSwitchToSignUp} className="font-bold text-[#E18AAA] dark:text-pink-400 hover:underline hover:text-pink-600 transition-colors">
+                        Create your space
                     </button>
                 </p>
             </div>
+            <style>{`
+                @keyframes float {
+                    0% { transform: translateY(0px); }
+                    50% { transform: translateY(-10px); }
+                    100% { transform: translateY(0px); }
+                }
+                .animate-float {
+                    animation: float 4s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     );
 };

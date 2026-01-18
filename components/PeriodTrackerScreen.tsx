@@ -5,7 +5,7 @@ import { Cycle, DayLog, PeriodFlow, Habit } from '../types';
 import { 
     WarningIcon, MenstrualPhaseIcon, FollicularPhaseIcon, OvulationPhaseIcon, LutealPhaseIcon, AddIcon, CheckIcon,
     DzikirIcon, MurajaahIcon, DuaIcon, ListenIcon,
-    GentleExerciseIcon, SupplementIcon, WaterDropIcon, AppleIcon, MoonIcon, SparklesIcon, GardenIcon, BackIcon, XMarkIcon, RestIcon,
+    GentleExerciseIcon, SupplementIcon, WaterDropIcon, AppleFruitIcon, MoonIcon, SparklesIcon, GardenIcon, BackIcon, XMarkIcon, RestIcon,
     BrainIcon, MoodIcon
 } from './icons';
 
@@ -208,7 +208,6 @@ const PeriodTrackerScreen: React.FC<PeriodTrackerProps> = ({ cycles, onUpdateCyc
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             
             // Format logs into a summary for the AI
-            // Fix: Cast 'log' to 'DayLog' to resolve TypeScript 'unknown' inference error
             const logSummary = Object.entries(dayLogs)
                 .slice(-30)
                 .map(([date, log]) => {
@@ -320,7 +319,7 @@ const PeriodTrackerScreen: React.FC<PeriodTrackerProps> = ({ cycles, onUpdateCyc
     };
     
     const toggleSymptom = (symptomName: string) => {
-        setLogSymptoms(prev => prev.includes(symptomName) ? prev.filter(s => a !== symptomName) : [...prev, symptomName]);
+        setLogSymptoms(prev => prev.includes(symptomName) ? prev.filter(s => s !== symptomName) : [...prev, symptomName]);
     };
 
     const PhaseIcon = { Menstrual: MenstrualPhaseIcon, Follicular: FollicularPhaseIcon, Ovulation: OvulationPhaseIcon, Luteal: LutealPhaseIcon }[insights.currentPhase.split(' ')[0]] || FollicularPhaseIcon;

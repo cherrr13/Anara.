@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import type { Habit, MoodEntry, JournalEntry } from '../types';
 import { 
     DeleteIcon, TrophyIcon, AddIcon, ReadingIcon, MoonStarIcon, SparklesIcon, CheckIcon, StarIcon,
-    WaterDropIcon, BedIcon, AppleIcon, BrainIcon, WalkingIcon, DumbbellIcon, YogaIcon, CoffeeIcon,
+    WaterDropIcon, BedIcon, AppleFruitIcon, BrainIcon, WalkingIcon, DumbbellIcon, YogaIcon, CoffeeIcon,
     TeaIcon, VeggieIcon, FruitBowlIcon, ClockIcon, CalendarIcon, BrushIcon, MusicIcon, CodeIcon,
     BagIcon, HomeIcon, CatIcon, PhoneIcon, DzikirIcon, MurajaahIcon, DuaIcon, ListenIcon, GentleExerciseIcon,
     XMarkIcon, FlameIcon
@@ -39,7 +39,7 @@ const HABIT_COLORS = [
 const HABIT_ICONS = {
     Body: [
         { id: 'WaterDropIcon', Icon: WaterDropIcon },
-        { id: 'AppleIcon', Icon: AppleIcon },
+        { id: 'AppleFruitIcon', Icon: AppleFruitIcon },
         { id: 'ExerciseIcon', Icon: GentleExerciseIcon },
         { id: 'WalkingIcon', Icon: WalkingIcon },
         { id: 'DumbbellIcon', Icon: DumbbellIcon },
@@ -77,7 +77,7 @@ const HABIT_ICONS = {
 };
 
 const IconMap: Record<string, React.FC<{ className?: string }>> = {
-    WaterDropIcon, BedIcon, AppleIcon, BrainIcon, WalkingIcon, DumbbellIcon, YogaIcon, CoffeeIcon,
+    WaterDropIcon, BedIcon, AppleFruitIcon, BrainIcon, WalkingIcon, DumbbellIcon, YogaIcon, CoffeeIcon,
     TeaIcon, VeggieIcon, FruitBowlIcon, ClockIcon, CalendarIcon, BrushIcon, MusicIcon, CodeIcon,
     BagIcon, HomeIcon, CatIcon, PhoneIcon, DzikirIcon, MurajaahIcon, DuaIcon, ListenIcon, GentleExerciseIcon,
     StarIcon, ReadingIcon, SparklesIcon, MoonStarIcon

@@ -74,7 +74,7 @@ const AuthUtils = {
 const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
-    const [showSignUp, setShowSignUp] = useState(false);
+    const [showSignUp, setShowSignUp] = useState(true);
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(() => localStorage.getItem(PENDING_VERIFICATION_KEY));
     const [activeTab, setActiveTab] = useState<Tab>(() => (localStorage.getItem('anaraActiveTab') as Tab) || Tab.Dashboard);
     const [isNaraFriendOpen, setIsNaraFriendOpen] = useState(false);

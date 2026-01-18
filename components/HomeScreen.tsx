@@ -1,8 +1,8 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { MoodEntry, Habit, JournalEntry, Cycle, DayLog, Tab, User, SleepEntry } from '../types.ts';
-import { MoodIcon, JournalIcon, HabitIcon, SparklesIcon, SleepTrackerIcon, PeriodIcon, GardenIcon, ShareIcon, CheckIcon, MoonStarIcon, DzikirIcon, DuaIcon, ListenIcon, AddIcon, MenuGridIcon, CalmMoodIcon, HappyMoodIcon, TiredMoodIcon, FrustratedMoodIcon, SadMoodIcon, GratefulMoodIcon } from './icons.tsx';
+import { MoodIcon, JournalIcon, HabitIcon, SparklesIcon, SleepTrackerIcon, PeriodIcon, GardenIcon, ShareIcon, CheckIcon, MoonStarIcon, DzikirIcon, DuaIcon, ListenIcon, AddIcon, MenuGridIcon, CalmMoodIcon, HappyMoodIcon, TiredMoodIcon, FrustratedMoodIcon, SadMoodIcon, GratefulMoodIcon, RotateLeftIcon } from './icons.tsx';
 
 const WELLNESS_QUOTES = [
     { text: "Self-care is how you take your power back.", author: "Lalah Delia" },
@@ -10,7 +10,9 @@ const WELLNESS_QUOTES = [
     { text: "Nurturing yourself is not selfish. It’s essential to your survival.", author: "Renee Peterson Trudeau" },
     { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
     { text: "Your heart knows the way. Run in that direction.", author: "Rumi" },
-    { text: "Peace is a daily practice, not a destination.", author: "Anonymous" }
+    { text: "Peace is a daily practice, not a destination.", author: "Anonymous" },
+    { text: "Inhale the future, exhale the past.", author: "Anonymous" },
+    { text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery" }
 ];
 
 const MoodIconMap: Record<string, React.FC<{ className?: string }>> = {
@@ -38,10 +40,16 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
     const [aiInsight, setAiInsight] = useState<string | null>(null);
     const [isInsightLoading, setIsInsightLoading] = useState(false);
     const [showShareToast, setShowShareToast] = useState(false);
+    
+    // State for the motivational quote
+    const [currentQuote, setCurrentQuote] = useState(() => {
+        const today = new Date();
+        return WELLNESS_QUOTES[today.getDate() % WELLNESS_QUOTES.length];
+    });
+    const [isRefreshingQuote, setIsRefreshingQuote] = useState(false);
 
     const summary = useMemo(() => {
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
         
         // Mood
         const latestMood = moodHistory[0]?.mood || 'Not Set';
@@ -62,8 +70,23 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
         // Garden
         const level = Math.floor(gardenXp / 25) + 1;
 
-        return { latestMood, habitRate, cycleInfo, level, quote: WELLNESS_QUOTES[today.getDate() % WELLNESS_QUOTES.length] };
+        return { latestMood, habitRate, cycleInfo, level };
     }, [moodHistory, habits, cycleData, gardenXp]);
+
+    const refreshQuote = useCallback(() => {
+        setIsRefreshingQuote(true);
+        if ('vibrate' in navigator) navigator.vibrate(10);
+        
+        setTimeout(() => {
+            let nextQuote;
+            do {
+                nextQuote = WELLNESS_QUOTES[Math.floor(Math.random() * WELLNESS_QUOTES.length)];
+            } while (nextQuote.text === currentQuote.text);
+            
+            setCurrentQuote(nextQuote);
+            setIsRefreshingQuote(false);
+        }, 300);
+    }, [currentQuote]);
 
     const fetchInsight = async () => {
         if (!user) return;
@@ -166,34 +189,51 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
             </div>
 
             {/* Daily Inspiration Card */}
-            <div className="bg-gradient-to-br from-[#E0D9FE] to-[#FCE7F3] dark:from-slate-800 dark:to-slate-900 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-[#E0D9FE] to-[#FCE7F3] dark:from-indigo-900/20 dark:to-purple-900/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group border border-white/50 dark:border-slate-700">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700"></div>
                 
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                    <div className="p-3 bg-white/40 dark:bg-slate-700/40 rounded-2xl text-purple-600 dark:text-purple-300">
-                         <SparklesIcon className="w-6 h-6" />
+                <div className="flex justify-between items-center mb-6 relative z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-white/40 dark:bg-slate-700/40 rounded-2xl text-purple-600 dark:text-purple-300 shadow-sm">
+                             <SparklesIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold font-sans text-purple-900/50 dark:text-purple-100/50 uppercase tracking-[0.2em]">Daily Intention</p>
+                        </div>
                     </div>
-                    <button onClick={() => {
-                         navigator.clipboard.writeText(`"${summary.quote.text}" — ${summary.quote.author}`);
-                         setShowShareToast(true);
-                         setTimeout(() => setShowShareToast(false), 2000);
-                    }} className="p-3 text-purple-400 hover:text-purple-600 transition-colors rounded-xl bg-white/20">
-                        <ShareIcon className="w-5 h-5" />
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={refreshQuote}
+                            disabled={isRefreshingQuote}
+                            className={`p-3 text-purple-600 dark:text-purple-300 hover:text-purple-800 transition-all rounded-xl bg-white/40 hover:bg-white/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 shadow-sm active:scale-90 ${isRefreshingQuote ? 'animate-spin' : ''}`}
+                            title="Refresh Quote"
+                        >
+                            <RotateLeftIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => {
+                             navigator.clipboard.writeText(`"${currentQuote.text}" — ${currentQuote.author}`);
+                             setShowShareToast(true);
+                             setTimeout(() => setShowShareToast(false), 2000);
+                        }} className="p-3 text-purple-600 dark:text-purple-300 hover:text-purple-800 transition-all rounded-xl bg-white/40 hover:bg-white/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 shadow-sm active:scale-90" title="Share">
+                            <ShareIcon className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
-                <blockquote className="space-y-4 relative z-10">
+                
+                <blockquote className={`space-y-4 relative z-10 transition-all duration-300 ${isRefreshingQuote ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
                     <p className="text-2xl font-serif text-purple-900 dark:text-purple-100 italic leading-snug">
-                        "{summary.quote.text}"
+                        "{currentQuote.text}"
                     </p>
                     <footer className="text-sm font-sans font-bold text-purple-400 dark:text-purple-300 uppercase tracking-widest">
-                        — {summary.quote.author}
+                        — {currentQuote.author}
                     </footer>
                 </blockquote>
             </div>
 
             {showShareToast && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2 px-6 rounded-full text-xs font-bold animate-pop z-50">
-                    Inspiration copied to clipboard!
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800/90 backdrop-blur-md text-white py-3 px-8 rounded-full text-[10px] font-bold uppercase tracking-widest animate-pop z-50 shadow-2xl flex items-center gap-2">
+                    <CheckIcon className="w-4 h-4 text-emerald-400" />
+                    Copied to clipboard
                 </div>
             )}
         </div>

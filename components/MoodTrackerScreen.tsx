@@ -14,12 +14,12 @@ const getDateString = (date: Date) => {
 };
 
 const moods = [
-    { name: 'Happy', Icon: HappyMoodIcon, color: 'bg-yellow-100 text-yellow-700', border: 'border-yellow-200' },
-    { name: 'Calm', Icon: CalmMoodIcon, color: 'bg-cyan-100 text-cyan-700', border: 'border-cyan-200' },
-    { name: 'Tired', Icon: TiredMoodIcon, color: 'bg-indigo-100 text-indigo-700', border: 'border-indigo-200' },
-    { name: 'Frustrated', Icon: FrustratedMoodIcon, color: 'bg-orange-100 text-orange-700', border: 'border-orange-200' },
-    { name: 'Sad', Icon: SadMoodIcon, color: 'bg-blue-100 text-blue-700', border: 'border-blue-200' },
-    { name: 'Grateful', Icon: GratefulMoodIcon, color: 'bg-pink-100 text-pink-700', border: 'border-pink-200' },
+    { name: 'Happy', Icon: HappyMoodIcon, color: 'bg-yellow-100 text-yellow-700', border: 'border-yellow-200', barColor: 'bg-yellow-400' },
+    { name: 'Calm', Icon: CalmMoodIcon, color: 'bg-cyan-100 text-cyan-700', border: 'border-cyan-200', barColor: 'bg-cyan-400' },
+    { name: 'Tired', Icon: TiredMoodIcon, color: 'bg-indigo-100 text-indigo-700', border: 'border-indigo-200', barColor: 'bg-indigo-400' },
+    { name: 'Frustrated', Icon: FrustratedMoodIcon, color: 'bg-orange-100 text-orange-700', border: 'border-orange-200', barColor: 'bg-orange-400' },
+    { name: 'Sad', Icon: SadMoodIcon, color: 'bg-blue-100 text-blue-700', border: 'border-blue-200', barColor: 'bg-blue-400' },
+    { name: 'Grateful', Icon: GratefulMoodIcon, color: 'bg-pink-100 text-pink-700', border: 'border-pink-200', barColor: 'bg-pink-400' },
 ] as const;
 
 const activities = [
@@ -38,10 +38,59 @@ const MoodIconMap: Record<string, React.FC<{ className?: string }>> = {
     'Grateful': GratefulMoodIcon
 };
 
-interface MoodTrackerScreenProps {
-    moodHistory: MoodEntry[];
-    onAddMoodEntry: (entry: Omit<MoodEntry, 'id' | 'date'>) => void;
-}
+// --- TREND CHART COMPONENT ---
+const MoodTrendChart: React.FC<{ history: MoodEntry[] }> = ({ history }) => {
+    const distribution = useMemo(() => {
+        const lastWeek = new Date();
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        
+        const counts: Record<string, number> = {
+            'Happy': 0, 'Calm': 0, 'Tired': 0, 'Frustrated': 0, 'Sad': 0, 'Grateful': 0
+        };
+
+        history.forEach(entry => {
+            if (new Date(entry.date) >= lastWeek) {
+                counts[entry.mood] = (counts[entry.mood] || 0) + 1;
+            }
+        });
+
+        const maxCount = Math.max(...Object.values(counts), 1);
+        return moods.map(m => ({
+            ...m,
+            count: counts[m.name],
+            percent: (counts[m.name] / maxCount) * 100
+        }));
+    }, [history]);
+
+    return (
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl p-8 border border-gray-100 dark:border-slate-700">
+            <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100 mb-6">Weekly Distribution</h3>
+            <div className="flex items-end justify-between h-40 gap-2 mb-4">
+                {distribution.map(item => (
+                    <div key={item.name} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                        <div className="text-[10px] font-bold text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-4">
+                            {item.count}
+                        </div>
+                        <div 
+                            className={`w-full max-w-[24px] rounded-t-xl transition-all duration-700 ease-out shadow-sm ${item.barColor}`}
+                            style={{ height: `${item.percent}%` }}
+                        ></div>
+                        <div className="mt-3">
+                            <item.Icon className="w-5 h-5" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="flex justify-between px-2">
+                {distribution.map(item => (
+                    <span key={item.name} className="flex-1 text-center text-[8px] font-bold text-gray-400 uppercase tracking-tighter truncate px-1">
+                        {item.name}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 // --- CALENDAR COMPONENT ---
 const MoodCalendar: React.FC<{ history: MoodEntry[] }> = ({ history }) => {
@@ -190,6 +239,11 @@ const MoodCalendar: React.FC<{ history: MoodEntry[] }> = ({ history }) => {
     );
 };
 
+interface MoodTrackerScreenProps {
+    moodHistory: MoodEntry[];
+    onAddMoodEntry: (entry: Omit<MoodEntry, 'id' | 'date'>) => void;
+}
+
 const MoodTrackerScreen: React.FC<MoodTrackerScreenProps> = ({ moodHistory, onAddMoodEntry }) => {
     const [selectedMood, setSelectedMood] = useState<typeof moods[number]['name'] | null>(null);
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
@@ -212,6 +266,9 @@ const MoodTrackerScreen: React.FC<MoodTrackerScreenProps> = ({ moodHistory, onAd
                 <h2 className="text-3xl font-bold font-serif text-[#4B4246] dark:text-slate-100">Mood Lab</h2>
                 <p className="text-base font-sans text-[#8D7F85] dark:text-slate-400 mt-1">Capture your emotional state and track your growth over time.</p>
             </div>
+
+            {/* Weekly Trends Section */}
+            <MoodTrendChart history={moodHistory} />
 
             {/* Monthly Calendar View */}
             <MoodCalendar history={moodHistory} />

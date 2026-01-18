@@ -222,42 +222,43 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ entries, setEntries, user
 
             {activeTab === 'write' ? (
                 <div className="space-y-8 animate-fade-in">
-                    {/* Prompt Discovery Card with Multiple Prompts */}
-                    <div className="bg-gradient-to-br from-[#E0D9FE] to-[#FCE7F3] dark:from-indigo-900/40 dark:to-purple-900/40 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group">
+                    {/* Prompt Discovery Card with Multiple Prompts - Compact Layout */}
+                    <div className="bg-gradient-to-br from-[#E0D9FE] to-[#FCE7F3] dark:from-indigo-900/40 dark:to-purple-900/40 rounded-[2.5rem] p-6 sm:p-8 shadow-xl relative overflow-hidden group">
                         <div className="flex justify-between items-center mb-6 relative z-10">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white/40 dark:bg-slate-800/40 rounded-xl">
-                                    <SparklesIcon className="w-6 h-6 text-purple-600" />
+                                    <SparklesIcon className="w-5 h-5 text-purple-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold font-serif text-purple-900 dark:text-purple-100">Spark a Memory</h3>
-                                    <p className="text-[10px] font-bold font-sans text-purple-400 uppercase tracking-widest">Select a path for your reflection</p>
+                                    <h3 className="text-lg sm:text-xl font-bold font-serif text-purple-900 dark:text-purple-100">Spark a Memory</h3>
+                                    <p className="text-[9px] font-bold font-sans text-purple-400 uppercase tracking-widest">Select a path for reflection</p>
                                 </div>
                             </div>
-                            <button onClick={refreshPrompts} className="text-[10px] font-bold font-sans uppercase tracking-widest px-5 py-2.5 bg-white dark:bg-slate-800 text-purple-600 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 border border-purple-100 dark:border-slate-700">
-                                Refresh All
+                            <button onClick={refreshPrompts} className="text-[9px] font-bold font-sans uppercase tracking-widest px-4 py-2 bg-white dark:bg-slate-800 text-purple-600 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 border border-purple-100 dark:border-slate-700">
+                                Refresh
                             </button>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+                        <div className="flex flex-wrap gap-3 relative z-10">
                             {activePrompts.map((prompt, index) => (
                                 <button 
                                     key={index}
                                     onClick={() => usePromptAsTitle(prompt)}
-                                    className="text-left p-6 bg-white/50 dark:bg-slate-800/50 rounded-3xl border border-white/60 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all group/prompt flex flex-col justify-between min-h-[140px] shadow-sm hover:shadow-md hover:-translate-y-1"
+                                    className="text-left p-4 sm:p-5 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-white/60 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-all group/prompt flex flex-col justify-center shadow-sm hover:shadow-md hover:-translate-y-0.5 flex-1 min-w-[240px]"
                                 >
-                                    <p className="text-sm sm:text-base font-medium font-serif italic text-purple-900 dark:text-purple-100 leading-relaxed">
+                                    <p className="text-sm font-medium font-serif italic text-purple-900 dark:text-purple-100 leading-snug">
                                         "{prompt}"
                                     </p>
-                                    <span className="text-[9px] font-bold uppercase tracking-widest mt-4 flex items-center gap-2 text-[#E18AAA] opacity-0 group-hover/prompt:opacity-100 transition-opacity">
-                                        <CheckIcon className="w-3 h-3" /> Tap to Use
-                                    </span>
+                                    <div className="flex items-center gap-1.5 mt-2 opacity-0 group-hover/prompt:opacity-100 transition-opacity">
+                                        <CheckIcon className="w-2.5 h-2.5 text-[#E18AAA]" />
+                                        <span className="text-[8px] font-bold uppercase tracking-widest text-[#E18AAA]">Use Prompt</span>
+                                    </div>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Main Editor - Horizontal Rectangle Layout */}
+                    {/* Main Editor */}
                     <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border-t-[8px] border-[#E18AAA] dark:border-pink-900 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-pink-50/20 dark:bg-pink-900/5 -translate-y-32 translate-x-32 rounded-full pointer-events-none"></div>
                         
@@ -274,7 +275,6 @@ const JournalScreen: React.FC<JournalScreenProps> = ({ entries, setEntries, user
                         
                         <div className="relative mb-8">
                             <label className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-3 block">Reflections</label>
-                            {/* Adjusted height to be more of a wide rectangle */}
                             <textarea 
                                 ref={textareaRef} 
                                 value={content} 

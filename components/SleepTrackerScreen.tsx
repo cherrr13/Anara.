@@ -2,7 +2,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import type { SleepEntry, User } from '../types';
-import { BedIcon, CheckIcon, DeleteIcon, MoonIcon, StarIcon, SparklesIcon, BackIcon, XMarkIcon } from './icons';
+import { 
+    BedIcon, CheckIcon, DeleteIcon, MoonIcon, StarIcon, SparklesIcon, BackIcon, XMarkIcon
+} from './icons';
 
 // Helper to normalize dates for mapping
 const getDateString = (date: Date) => {
@@ -10,10 +12,10 @@ const getDateString = (date: Date) => {
 };
 
 const qualityConfig = {
-    Excellent: { color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-100', stars: 4 },
-    Good: { color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/30', border: 'border-indigo-100', stars: 3 },
-    Fair: { color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-indigo-100', stars: 2 },
-    Poor: { color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/30', border: 'border-rose-100', stars: 1 }
+    Excellent: { color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-100', stars: 4, Icon: StarIcon },
+    Good: { color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/30', border: 'border-indigo-100', stars: 3, Icon: StarIcon },
+    Fair: { color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-indigo-100', stars: 2, Icon: StarIcon },
+    Poor: { color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/30', border: 'border-rose-100', stars: 1, Icon: StarIcon }
 };
 
 // --- SLEEP CALENDAR COMPONENT ---
@@ -64,9 +66,9 @@ const SleepCalendar: React.FC<SleepCalendarProps> = ({ history, onSelectEntry })
                 }`}
             >
                 <span className={`text-[10px] font-bold ${entry ? 'text-gray-400 mb-1' : 'text-gray-500'}`}>{d}</span>
-                {entry && (
-                    <div className={`${config?.color} animate-pop`}>
-                        <MoonIcon className="w-5 h-5 fill-current" />
+                {entry && config && (
+                    <div className={`${config.color} animate-pop`}>
+                        <config.Icon className="w-5 h-5 fill-current" />
                     </div>
                 )}
                 {isToday && !entry && <div className="w-1 h-1 bg-indigo-400 rounded-full mt-1"></div>}
@@ -215,7 +217,9 @@ const SleepTrackerScreen: React.FC<SleepTrackerScreenProps> = ({ user, sleepHist
 
                         <div className="flex flex-col items-center text-center space-y-6">
                             <div className={`p-6 rounded-[2rem] ${qualityConfig[selectedEntry.quality].bg} ${qualityConfig[selectedEntry.quality].border} border shadow-inner`}>
-                                <MoonIcon className={`w-16 h-16 ${qualityConfig[selectedEntry.quality].color} fill-current`} />
+                                {React.createElement(qualityConfig[selectedEntry.quality].Icon, { 
+                                    className: `w-16 h-16 ${qualityConfig[selectedEntry.quality].color} fill-current` 
+                                })}
                             </div>
                             
                             <div>
@@ -312,8 +316,8 @@ const SleepTrackerScreen: React.FC<SleepTrackerScreenProps> = ({ user, sleepHist
                     <label className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-4 block text-center">How was your sleep quality?</label>
                     <div className="flex justify-center gap-4">
                         {(['Poor', 'Fair', 'Good', 'Excellent'] as SleepEntry['quality'][]).map(q => (
-                            <button key={q} onClick={() => setQuality(q)} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${quality === q ? 'bg-indigo-500 text-white scale-125 shadow-lg' : 'bg-gray-100 text-gray-300 dark:bg-slate-700'}`}>
-                                <StarIcon className="w-6 h-6" />
+                            <button key={q} onClick={() => setQuality(q)} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${quality === q ? 'bg-indigo-500 text-white scale-125 shadow-lg' : 'bg-gray-100 text-gray-300 dark:bg-slate-700'}`}>
+                                {React.createElement(qualityConfig[q].Icon, { className: "w-7 h-7" })}
                             </button>
                         ))}
                     </div>
@@ -340,26 +344,29 @@ const SleepTrackerScreen: React.FC<SleepTrackerScreenProps> = ({ user, sleepHist
                 <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100 mb-6">Trends & Recent Nights</h3>
                 <SleepBarChart history={sleepHistory} />
                 <div className="space-y-3 mt-6">
-                    {sleepHistory.slice().reverse().slice(0, 3).map(entry => (
-                        <div 
-                            key={entry.id} 
-                            onClick={() => setSelectedEntry(entry)}
-                            className="flex flex-col p-4 rounded-2xl bg-gray-50/50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-700 cursor-pointer hover:bg-white dark:hover:bg-slate-800 transition-all"
-                        >
-                             <div className="flex justify-between items-center">
-                                 <div>
-                                     <p className="font-bold font-sans text-gray-700 dark:text-slate-200 text-sm uppercase tracking-wider">{new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                                     <p className="text-xs font-sans text-gray-400 dark:text-slate-500">{entry.bedTime} - {entry.wakeTime} • {entry.quality}</p>
+                    {sleepHistory.slice().reverse().slice(0, 3).map(entry => {
+                        const config = qualityConfig[entry.quality];
+                        return (
+                            <div 
+                                key={entry.id} 
+                                onClick={() => setSelectedEntry(entry)}
+                                className="flex flex-col p-4 rounded-2xl bg-gray-50/50 dark:bg-slate-900/50 border border-gray-100 dark:border-slate-700 cursor-pointer hover:bg-white dark:hover:bg-slate-800 transition-all"
+                            >
+                                 <div className="flex justify-between items-center">
+                                     <div>
+                                         <p className="font-bold font-sans text-gray-700 dark:text-slate-200 text-sm uppercase tracking-wider">{new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                                         <p className="text-xs font-sans text-gray-400 dark:text-slate-500">{entry.bedTime} - {entry.wakeTime} • {entry.quality}</p>
+                                     </div>
+                                     <div className="flex items-center gap-4">
+                                        <span className={`font-serif font-bold text-xl ${entry.durationHours >= 7 ? 'text-indigo-500' : 'text-pink-400'}`}>{entry.durationHours}h</span>
+                                        <div className={`${config.color}`}>
+                                            <config.Icon className="w-5 h-5 fill-current" />
+                                        </div>
+                                     </div>
                                  </div>
-                                 <div className="flex items-center gap-4">
-                                    <span className={`font-serif font-bold text-xl ${entry.durationHours >= 7 ? 'text-indigo-500' : 'text-pink-400'}`}>{entry.durationHours}h</span>
-                                    <div className={`${qualityConfig[entry.quality].color}`}>
-                                        <MoonIcon className="w-4 h-4 fill-current" />
-                                    </div>
-                                 </div>
-                             </div>
-                        </div>
-                    ))}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

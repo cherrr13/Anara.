@@ -24,9 +24,6 @@ const PENDING_VERIFICATION_KEY = 'anara_pending_email';
 const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const AUTH_AUDIT_KEY = 'anara_auth_audit';
 
-/**
- * Robust Error Logging Mechanism for Authentication Flow
- */
 class AuthLogger {
     private static readonly MAX_LOGS = 100;
 
@@ -34,7 +31,6 @@ class AuthLogger {
         try {
             const raw = localStorage.getItem(AUTH_AUDIT_KEY);
             const logs = raw ? JSON.parse(raw) : [];
-            
             const newEntry = {
                 id: crypto.randomUUID?.() || Date.now().toString(),
                 timestamp: new Date().toISOString(),
@@ -43,14 +39,10 @@ class AuthLogger {
                 status,
                 ...metadata
             };
-
             logs.unshift(newEntry);
-            
-            // Keep the log size robust but limited
             const limitedLogs = logs.slice(0, this.MAX_LOGS);
             localStorage.setItem(AUTH_AUDIT_KEY, JSON.stringify(limitedLogs));
         } catch (e) {
-            // Fallback for quota errors or parsing issues
             console.error("Critical: AuthLogger failed to persist entry.", e);
         }
     }
@@ -100,9 +92,6 @@ const App: React.FC = () => {
     const [isDarkMode, setIsDarkMode] = useState<boolean>(() => localStorage.getItem('anaraIsDarkMode') === 'true');
     const [isIslamicGuidanceOn, setIsIslamicGuidanceOn] = useState<boolean>(() => localStorage.getItem('anaraIslamicGuidance') === 'true');
 
-    /**
-     * CONSOLIDATED PERSISTENCE FUNCTION
-     */
     const saveAppState = useCallback(() => {
         if (isLoading) return;
         try {
@@ -135,7 +124,6 @@ const App: React.FC = () => {
                 const userRec = db.find((u: any) => u.email.toLowerCase() === validEmail.toLowerCase());
                 if (userRec?.isVerified) {
                     setUser({ name: userRec.name, email: userRec.email, profilePicture: userRec.profilePicture, isVerified: true });
-                    AuthLogger.log('SESSION', validEmail, 'SUCCESS', { mechanism: 'token_recon' });
                 }
             }
             setTimeout(() => setIsLoading(false), 1000);
@@ -151,30 +139,20 @@ const App: React.FC = () => {
     const handleLogin = (email: string, pass?: string) => {
         const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
         const userRec = db.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
-        
-        if (userRec) {
-            if (userRec.password === pass) {
-                if (!userRec.isVerified) {
-                    setUnverifiedEmail(email);
-                    localStorage.setItem(PENDING_VERIFICATION_KEY, email);
-                    AuthLogger.log('SIGN_IN', email, 'REDIRECT', { reason: 'Pending Verification' });
-                    return false;
-                }
-                localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(email));
-                setUser({ name: userRec.name, email: userRec.email, profilePicture: userRec.profilePicture, isVerified: true });
-                AuthLogger.log('SIGN_IN', email, 'SUCCESS');
-                return true;
-            } else {
-                AuthLogger.log('SIGN_IN', email, 'FAILURE', { reason: 'Invalid Credentials' });
+        if (userRec && userRec.password === pass) {
+            if (!userRec.isVerified) {
+                setUnverifiedEmail(email);
+                localStorage.setItem(PENDING_VERIFICATION_KEY, email);
+                return false;
             }
-        } else {
-            AuthLogger.log('SIGN_IN', email, 'FAILURE', { reason: 'User Not Found' });
+            localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(email));
+            setUser({ name: userRec.name, email: userRec.email, profilePicture: userRec.profilePicture, isVerified: true });
+            return true;
         }
         throw new Error("Invalid credentials.");
     };
 
     const handleLogout = () => {
-        AuthLogger.log('SESSION', user?.email || 'unknown', 'CANCEL', { action: 'Manual Logout' });
         setUser(null);
         localStorage.removeItem(SESSION_TOKEN_KEY);
         setActiveTab(Tab.Dashboard);
@@ -195,11 +173,9 @@ const App: React.FC = () => {
                     setUser({ name: db[idx].name, email: db[idx].email, isVerified: true });
                     setUnverifiedEmail(null);
                     localStorage.removeItem(PENDING_VERIFICATION_KEY);
-                    AuthLogger.log('VERIFY', unverifiedEmail, 'SUCCESS');
                 }
             }} 
             onBackToSignIn={() => { 
-                AuthLogger.log('VERIFY', unverifiedEmail, 'CANCEL', { reason: 'User navigated back' });
                 setUnverifiedEmail(null); 
                 localStorage.removeItem(PENDING_VERIFICATION_KEY); 
             }} 
@@ -210,12 +186,10 @@ const App: React.FC = () => {
         return showSignUp ? (
             <SignUpScreen onSignUp={(n, e, p) => {
                 const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
-                const normalizedEmail = e.toLowerCase();
-                db.push({ name: n, email: normalizedEmail, password: p, isVerified: false });
+                db.push({ name: n, email: e.toLowerCase(), password: p, isVerified: false });
                 localStorage.setItem('anaraAuthDB', JSON.stringify(db));
-                setUnverifiedEmail(normalizedEmail);
-                localStorage.setItem(PENDING_VERIFICATION_KEY, normalizedEmail);
-                AuthLogger.log('SIGN_UP', normalizedEmail, 'SUCCESS');
+                setUnverifiedEmail(e.toLowerCase());
+                localStorage.setItem(PENDING_VERIFICATION_KEY, e.toLowerCase());
             }} onSwitchToSignIn={() => setShowSignUp(false)} />
         ) : (
             <SignInScreen onLogin={handleLogin} onSwitchToSignUp={() => setShowSignUp(true)} />
@@ -233,21 +207,23 @@ const App: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#FFFBF9] dark:bg-slate-900 flex flex-col relative" style={{ fontFamily: "'Quicksand', sans-serif" }}>
-            <PomegranateFruitIcon className="absolute top-0 right-0 w-64 h-64 text-[#F4ABC4] opacity-20 dark:opacity-10 transform -rotate-12 translate-x-1/4 -translate-y-1/4 pointer-events-none z-0" />
-            <header className="flex items-center justify-between px-4 py-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-sm sticky top-0 z-20 border-b border-pink-100 dark:border-slate-700">
-                <button onClick={() => setActiveTab(Tab.Menu)} className="p-2 rounded-lg hover:bg-pink-50 dark:hover:bg-slate-700 transition-colors">
+        <div className="min-h-screen bg-[#FFFBF9] dark:bg-slate-900 flex flex-col relative overflow-x-hidden" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+            <PomegranateFruitIcon className="absolute top-20 right-0 w-64 h-64 text-[#F4ABC4] opacity-10 dark:opacity-5 transform -rotate-12 translate-x-1/4 pointer-events-none z-0" />
+            <header className="flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm sticky top-0 z-20 border-b border-pink-50 dark:border-slate-700">
+                <button onClick={() => setActiveTab(Tab.Menu)} className="p-2 rounded-xl hover:bg-pink-50 dark:hover:bg-slate-700 transition-colors z-30">
                     <MenuIcon className="h-6 w-6 text-[#E18AAA]" />
                 </button>
-                <div className="flex items-center absolute left-1/2 transform -translate-x-1/2 cursor-pointer" onClick={() => setActiveTab(Tab.Dashboard)}>
-                    <AnaraLogo className="h-10 w-10 text-[#F4ABC4] mr-2"/>
-                    <h1 className="text-2xl font-bold text-[#E18AAA] dark:text-pink-400 font-serif">Anara</h1>
+                <div className="flex items-center absolute inset-x-0 justify-center cursor-pointer pointer-events-none" onClick={() => setActiveTab(Tab.Dashboard)}>
+                    <div className="flex items-center pointer-events-auto">
+                        <AnaraLogo className="h-10 w-10 text-[#F4ABC4] mr-2"/>
+                        <h1 className="text-2xl font-bold text-[#E18AAA] dark:text-pink-400 font-serif">Anara</h1>
+                    </div>
                 </div>
-                <button onClick={() => setActiveTab(Tab.Menu)} className="h-10 w-10 flex items-center justify-center rounded-full bg-pink-100 dark:bg-slate-700 text-pink-500 font-bold overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-md">
+                <button onClick={() => setActiveTab(Tab.Settings)} className="h-10 w-10 flex items-center justify-center rounded-full bg-pink-100 dark:bg-slate-700 text-pink-500 font-bold overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-md z-30 transition-transform active:scale-90">
                     {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
                 </button>
             </header>
-            <main className="flex-grow p-4 pb-24 overflow-y-auto z-0">
+            <main className="flex-grow p-4 pb-24 overflow-y-auto z-0 relative">
                 {(() => {
                     switch (activeTab) {
                         case Tab.Dashboard: return <HomeScreen user={user} moodHistory={moodHistory} habits={habits} journalEntries={journalEntries} cycleData={{cycles, dayLogs}} onNavigate={setActiveTab} gardenXp={gardenXp} sleepHistory={sleepHistory} isIslamicGuidanceOn={isIslamicGuidanceOn} />;

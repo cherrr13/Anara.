@@ -673,6 +673,91 @@ export const SunIcon: React.FC<IconProps> = ({ className }) => (
     </svg>
 );
 
+// --- NEW ICONS FOR HABIT TRACKER ---
+export const WalkingIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 5.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM12.5 9l-2 2h-3l2 4 1.5 5.5M12.5 9l2.5 3 2 5" />
+    </svg>
+);
+export const DumbbellIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 7v10M3 9v6M21 9v6M18 7v10M6 12h12" />
+    </svg>
+);
+export const YogaIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7a2 2 0 100-4 2 2 0 000 4zm-7 7.5c1 1 3 0 5-1.5s4-1 6 0 3.5 2.5 3.5 2.5M12 11v4l-4 3m8-3l4 3" />
+    </svg>
+);
+export const CoffeeIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1l.5 3M10 1l.5 3M14 1l.5 3" />
+    </svg>
+);
+export const TeaIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 12h2a3 3 0 010 6h-2M2 12h15v5a4 4 0 01-4 4H6a4 4 0 01-4-4v-5zM9 8v4" />
+    </svg>
+);
+export const VeggieIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 15V6M6 12h12" />
+    </svg>
+);
+export const FruitBowlIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2 12a10 10 0 0020 0H2zM12 5a3 3 0 110 6 3 3 0 010-6z" />
+    </svg>
+);
+export const ClockIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="9" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+    </svg>
+);
+export const CalendarIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+);
+export const BrushIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 3c-1.5 0-3 1.5-3 3s1.5 3 3 3 3-1.5 3-3-1.5-3-3-3zM3 21l6-6m3-3l6-6" />
+    </svg>
+);
+export const MusicIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 18V5l12-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zm12-2a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+export const CodeIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>
+);
+export const BagIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+    </svg>
+);
+export const HomeIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+);
+export const CatIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21c-4 0-7-3-7-7s3-7 7-7 7 3 7 7-3 7-7 7zM9 7L6 3M15 7l3-4M12 11l.01-.01M9 14s1 1 3 1 3-1 3-1" />
+    </svg>
+);
+export const PhoneIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <rect x="6" y="2" width="12" height="20" rx="3" ry="3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01" />
+    </svg>
+);
+
 // --- NEW ICONS FOR SHARE & CLOSE ---
 export const ShareIcon: React.FC<IconProps> = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -710,5 +795,41 @@ export const WandIcon: React.FC<IconProps> = ({ className }) => (
 export const SaveIcon: React.FC<IconProps> = ({ className }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+// --- NEW SLEEP QUALITY ICONS ---
+
+export const SleepExcellentIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21a9 9 0 1 0-8.354-5.646A9.003 9.003 0 0 1 15.354 3.646 9.003 9.003 0 0 0 12 21Z" fill="currentColor" opacity="0.8"/>
+        <path d="M19 4l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5ZM16 9l.3.9.9.3-.9.3-.3.9-.3-.9-.9-.3.9-.3.3-.9Z" fill="currentColor"/>
+    </svg>
+);
+
+export const SleepGoodIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21a9 9 0 1 0-8.354-5.646A9.003 9.003 0 0 1 15.354 3.646 9.003 9.003 0 0 0 12 21Z" fill="currentColor" opacity="0.6"/>
+        <path d="M18 6l.3.9.9.3-.9.3-.3.9-.3-.9-.9-.3.9-.3.3-.9Z" fill="currentColor"/>
+    </svg>
+);
+
+export const SleepFairIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 19a7 7 0 1 0-6.498-4.391A7.003 7.003 0 0 1 13.615 5.5 7.003 7.003 0 0 0 11 19Z" fill="currentColor" opacity="0.5"/>
+        <path d="M13 14c-1.5 0-3 1-3 2.5s1.5 2.5 3 2.5h6c1.5 0 3-1 3-2.5S20.5 14 19 14h-6Z" fill="currentColor" opacity="0.3"/>
+    </svg>
+);
+
+export const SleepPoorIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 14c-2 0-4 1.5-4 3.5S4 21 6 21h12c2 0 4-1.5 4-3.5S20 14 18 14h-12Z" fill="currentColor" opacity="0.4"/>
+        <path d="M14 6h4v1.5h-2.5L18 9v1.5h-4V9h2.5L14 7.5V6Z" fill="currentColor" opacity="0.6"/>
+    </svg>
+);
+
+export const FlameIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.66 11.5c-.21-.07-.41-.14-.61-.21C16.32 10.1 15 8.39 15 6.5c0-1.89 1.32-3.6 2.05-4.79.08-.13.01-.31-.15-.31-1.07.03-2.13.25-3.13.66-2.18.9-3.77 3-3.77 5.44 0 1.15.34 2.22.91 3.12-.57-.57-1.12-1.12-1.12-1.12s-3 3-3 7.5c0 3.87 3.13 7 7 7s7-3.13 7-7c0-.82-.14-1.61-.41-2.34-.05-.14-.2-.17-.29-.06-.52.51-1.1 1.02-1.63 1.54z"/>
     </svg>
 );

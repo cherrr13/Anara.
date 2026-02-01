@@ -6,7 +6,7 @@ import {
     WaterDropIcon, BedIcon, AppleFruitIcon, BrainIcon, WalkingIcon, DumbbellIcon, YogaIcon, CoffeeIcon,
     TeaIcon, VeggieIcon, FruitBowlIcon, ClockIcon, CalendarIcon, BrushIcon, MusicIcon, CodeIcon,
     BagIcon, HomeIcon, CatIcon, PhoneIcon, DzikirIcon, MurajaahIcon, DuaIcon, ListenIcon, GentleExerciseIcon,
-    XMarkIcon, FlameIcon
+    XMarkIcon, FlameIcon, MoodIcon
 } from './icons.tsx';
 
 interface HabitTrackerScreenProps {
@@ -17,6 +17,18 @@ interface HabitTrackerScreenProps {
     journalEntries: JournalEntry[];
     isIslamicGuidanceOn: boolean;
 }
+
+const GENERAL_HABIT_TEMPLATES = [
+    { name: 'Stay Hydrated', icon: 'WaterDropIcon', color: '#60A5FA', category: 'Body' },
+    { name: 'Daily Walk', icon: 'WalkingIcon', color: '#10B981', category: 'Body' },
+    { name: 'Morning Yoga', icon: 'YogaIcon', color: '#A78BFA', category: 'Body' },
+    { name: 'Read 15 Mins', icon: 'ReadingIcon', color: '#F59E0B', category: 'Mind' },
+    { name: 'Deep Work', icon: 'CodeIcon', color: '#6366F1', category: 'Mind' },
+    { name: 'Grateful List', icon: 'SparklesIcon', color: '#E18AAA', category: 'Mind' },
+    { name: 'Tidy Space', icon: 'HomeIcon', color: '#2DD4BF', category: 'Daily' },
+    { name: 'No Caffeine', icon: 'CoffeeIcon', color: '#FB7185', category: 'Daily' },
+    { name: '8h Rest', icon: 'BedIcon', iconAlt: 'MoonIcon', color: '#4F46E5', category: 'Daily' },
+];
 
 const ISLAMIC_HABIT_TEMPLATES = [
     { name: 'Morning Adhkar', description: 'Recite SubhanAllah, Alhamdulillah, Allahu Akbar (33x each)', icon: 'DzikirIcon', color: '#10B981' },
@@ -93,20 +105,30 @@ const HabitTrackerScreen: React.FC<HabitTrackerScreenProps> = ({ habits, setHabi
     
     const progress = habits.length ? (habits.filter(h => h.completed).length / habits.length) * 100 : 0;
 
-    const handleAddHabit = () => {
-        if (name.trim()) {
+    const handleAddHabit = (customName?: string, customIcon?: string, customColor?: string) => {
+        const finalName = customName || name;
+        if (finalName.trim()) {
+            // Check for duplicates
+            if (habits.some(h => h.name.toLowerCase() === finalName.toLowerCase())) {
+                if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
+                return;
+            }
+
             setHabits([{ 
                 id: Date.now().toString(), 
-                name, 
+                name: finalName, 
                 completed: false, 
                 streak: 0, 
-                color: selectedColor, 
-                icon: selectedIconId 
+                color: customColor || selectedColor, 
+                icon: customIcon || selectedIconId 
             }, ...habits]);
-            setName('');
-            setSelectedIconId('StarIcon');
-            setSelectedColor('#E18AAA');
-            setIsPersonalizerOpen(false);
+            
+            if (!customName) {
+                setName('');
+                setSelectedIconId('StarIcon');
+                setSelectedColor('#E18AAA');
+                setIsPersonalizerOpen(false);
+            }
             if ('vibrate' in navigator) navigator.vibrate(20);
         }
     };
@@ -194,11 +216,39 @@ const HabitTrackerScreen: React.FC<HabitTrackerScreenProps> = ({ habits, setHabi
                 </div>
             </div>
 
-            {/* Quick Actions & Seeding */}
+            {/* Quick Actions & Selection */}
             <div className="flex flex-col gap-4">
                 <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl p-8 border border-gray-100 dark:border-slate-700/50 relative">
-                    <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-200 mb-6">Add New Habit</h3>
+                    <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-200 mb-6">Explore Rituals</h3>
                     
+                    {/* Habit Templates Selection */}
+                    <div className="mb-8">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Discover Path</p>
+                        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin scroll-smooth">
+                            {GENERAL_HABIT_TEMPLATES.map((tmpl) => {
+                                const IconComp = IconMap[tmpl.icon] || StarIcon;
+                                const isAdded = habits.some(h => h.name.toLowerCase() === tmpl.name.toLowerCase());
+                                return (
+                                    <button
+                                        key={tmpl.name}
+                                        disabled={isAdded}
+                                        onClick={() => handleAddHabit(tmpl.name, tmpl.icon, tmpl.color)}
+                                        className={`flex-shrink-0 flex flex-col items-center gap-2 p-4 rounded-3xl border-2 transition-all group ${isAdded ? 'opacity-30 border-gray-100 bg-gray-50 dark:bg-slate-700' : 'border-white dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30 hover:border-pink-200 hover:shadow-md active:scale-95'}`}
+                                    >
+                                        <div className={`p-3 rounded-2xl transition-transform group-hover:scale-110`} style={{ backgroundColor: isAdded ? '#f3f4f6' : `${tmpl.color}20`, color: tmpl.color }}>
+                                            <IconComp className="w-6 h-6" />
+                                        </div>
+                                        <span className="text-[10px] font-bold font-sans uppercase tracking-widest dark:text-slate-300">
+                                            {isAdded ? 'Added' : tmpl.name}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-gray-100 dark:bg-slate-700 mb-8"></div>
+
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex gap-2 flex-1">
                             <button 
@@ -220,7 +270,7 @@ const HabitTrackerScreen: React.FC<HabitTrackerScreenProps> = ({ habits, setHabi
                             />
                         </div>
                         <button 
-                            onClick={handleAddHabit} 
+                            onClick={() => handleAddHabit()} 
                             className="text-white p-5 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 hover:brightness-110"
                             style={{ backgroundColor: selectedColor }}
                         >

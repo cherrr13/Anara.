@@ -5,7 +5,8 @@ import {
     CheckIcon, ExerciseIcon, MeditationIcon, SocializingIcon, CreativeIcon, 
     WorkIcon, RestIcon, NatureIcon, HappyMoodIcon, CalmMoodIcon, 
     TiredMoodIcon, FrustratedMoodIcon, SadMoodIcon, GratefulMoodIcon, 
-    ReadingIcon, DeleteIcon, AddIcon, XMarkIcon, BackIcon, SparklesIcon
+    ReadingIcon, DeleteIcon, AddIcon, XMarkIcon, BackIcon, SparklesIcon,
+    WalkingIcon, SearchIcon
 } from './icons';
 
 // Helper to normalize dates for mapping
@@ -22,12 +23,26 @@ const moods = [
     { name: 'Grateful', Icon: GratefulMoodIcon, color: 'bg-pink-100 text-pink-700', border: 'border-pink-200', barColor: 'bg-pink-400' },
 ] as const;
 
-const activities = [
-    { name: 'Exercise', Icon: ExerciseIcon }, { name: 'Meditation', Icon: MeditationIcon },
-    { name: 'Socializing', Icon: SocializingIcon }, { name: 'Reading', Icon: ReadingIcon },
-    { name: 'Creative', Icon: CreativeIcon }, { name: 'Work', Icon: WorkIcon },
-    { name: 'Rest', Icon: RestIcon }, { name: 'Nature', Icon: NatureIcon },
-];
+const categorizedActivities = {
+    'Physical': [
+        { name: 'Exercise', Icon: ExerciseIcon },
+        { name: 'Walking', Icon: WalkingIcon },
+        { name: 'Rest', Icon: RestIcon },
+        { name: 'Nature', Icon: NatureIcon },
+    ],
+    'Mind & Soul': [
+        { name: 'Meditation', Icon: MeditationIcon },
+        { name: 'Reading', Icon: ReadingIcon },
+        { name: 'Creative', Icon: CreativeIcon },
+    ],
+    'Daily & Social': [
+        { name: 'Work', Icon: WorkIcon },
+        { name: 'Socializing', Icon: SocializingIcon },
+    ]
+};
+
+// Flatten for search
+const allActivities = Object.values(categorizedActivities).flat();
 
 const MoodIconMap: Record<string, React.FC<{ className?: string }>> = {
     'Happy': HappyMoodIcon,
@@ -180,7 +195,7 @@ const MoodCalendar: React.FC<{ history: MoodEntry[] }> = ({ history }) => {
                     onClick={() => setSelectedEntry(null)}
                 >
                     <div 
-                        className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl animate-pop relative overflow-hidden"
+                        className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-sm w-full shadow-2xl animate-pop relative overflow-hidden"
                         onClick={e => e.stopPropagation()}
                     >
                         <button onClick={() => setSelectedEntry(null)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full text-gray-400 z-10">
@@ -204,7 +219,7 @@ const MoodCalendar: React.FC<{ history: MoodEntry[] }> = ({ history }) => {
                                     <p className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-3">Contextual Activities</p>
                                     <div className="flex flex-wrap justify-center gap-2">
                                         {selectedEntry.activities.map(act => {
-                                            const actData = activities.find(a => a.name === act);
+                                            const actData = allActivities.find(a => a.name === act);
                                             return (
                                                 <div key={act} className="px-3 py-1.5 bg-gray-50 dark:bg-slate-700/50 rounded-full flex items-center gap-2 border border-gray-100 dark:border-slate-700 shadow-sm">
                                                     {actData && <actData.Icon className="w-3 h-3 text-indigo-400" />}
@@ -249,6 +264,12 @@ const MoodTrackerScreen: React.FC<MoodTrackerScreenProps> = ({ moodHistory, onAd
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
     const [note, setNote] = useState('');
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [activitySearch, setActivitySearch] = useState('');
+
+    const filteredActivities = useMemo(() => {
+        if (!activitySearch.trim()) return null;
+        return allActivities.filter(a => a.name.toLowerCase().includes(activitySearch.toLowerCase()));
+    }, [activitySearch]);
 
     const handleSubmit = () => {
         if (selectedMood) {
@@ -257,6 +278,12 @@ const MoodTrackerScreen: React.FC<MoodTrackerScreenProps> = ({ moodHistory, onAd
             setShowConfirmation(true); setTimeout(() => setShowConfirmation(false), 2500);
             if ('vibrate' in navigator) navigator.vibrate(50);
         }
+    };
+
+    const toggleActivity = (name: string) => {
+        setSelectedActivities(prev => 
+            prev.includes(name) ? prev.filter(a => a !== name) : [...prev, name]
+        );
     };
 
     return (
@@ -286,16 +313,58 @@ const MoodTrackerScreen: React.FC<MoodTrackerScreenProps> = ({ moodHistory, onAd
                     </div>
                 </div>
 
-                <div>
-                    <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100 mb-6">Contextual Activities</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {activities.map(({ name, Icon }) => (
-                            <button key={name} onClick={() => setSelectedActivities(prev => prev.includes(name) ? prev.filter(a => a !== name) : [...prev, name])} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all font-sans font-bold text-sm ${selectedActivities.includes(name) ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-600 dark:text-indigo-200 shadow-md' : 'bg-gray-50 border-transparent text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                <Icon className="w-5 h-5" />
-                                <span className="uppercase tracking-wide text-[10px]">{name}</span>
-                            </button>
-                        ))}
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100">Contextual Activities</h3>
+                        <div className="relative flex-grow max-w-xs">
+                            <input 
+                                type="text"
+                                value={activitySearch}
+                                onChange={(e) => setActivitySearch(e.target.value)}
+                                placeholder="Search activities..."
+                                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-[#F4ABC4] transition-all text-sm font-sans"
+                            />
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            {activitySearch && (
+                                <button onClick={() => setActivitySearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    <XMarkIcon className="w-4 h-4 text-gray-400" />
+                                </button>
+                            )}
+                        </div>
                     </div>
+
+                    {filteredActivities ? (
+                        <div className="space-y-4 animate-fade-in">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Search Results</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {filteredActivities.map(({ name, Icon }) => (
+                                    <button key={name} onClick={() => toggleActivity(name)} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all font-sans font-bold text-sm ${selectedActivities.includes(name) ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-600 dark:text-indigo-200 shadow-md' : 'bg-gray-50 border-transparent text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                        <Icon className="w-5 h-5" />
+                                        <span className="uppercase tracking-wide text-[10px]">{name}</span>
+                                    </button>
+                                ))}
+                                {filteredActivities.length === 0 && (
+                                    <div className="col-span-full py-4 text-center text-gray-400 italic text-sm">No activities match your search.</div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 animate-fade-in">
+                            {Object.entries(categorizedActivities).map(([category, items]) => (
+                                <div key={category} className="space-y-4">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">{category}</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {items.map(({ name, Icon }) => (
+                                            <button key={name} onClick={() => toggleActivity(name)} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all font-sans font-bold text-sm ${selectedActivities.includes(name) ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-600 dark:text-indigo-200 shadow-md' : 'bg-gray-50 border-transparent text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                                <Icon className="w-5 h-5" />
+                                                <span className="uppercase tracking-wide text-[10px]">{name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { DashboardIcon, MoodIcon, HabitIcon, JournalIcon, PeriodIcon, GardenIcon, SettingsIcon, AnaraLogo, UserIcon, PomegranateFruitIcon, SparklesIcon, MenuIcon, SleepTrackerIcon, MenuGridIcon } from './components/icons.tsx';
+import { DashboardIcon, MoodIcon, HabitIcon, JournalIcon, PeriodIcon, GardenIcon, SettingsIcon, AnaraLogo, UserIcon, SakuraBranchIcon, SparklesIcon, MenuIcon, SleepTrackerIcon, MenuGridIcon } from './components/icons.tsx';
 import HomeScreen from './components/HomeScreen.tsx';
 import MoodTrackerScreen from './components/MoodTrackerScreen.tsx';
 import HabitTrackerScreen from './components/HabitTrackerScreen.tsx';
@@ -17,10 +17,12 @@ import SignUpScreen from './components/auth/SignUpScreen.tsx';
 import VerificationScreen from './components/auth/VerificationScreen.tsx';
 import { Tab, MoodEntry, Habit, JournalEntry, Cycle, DayLog, GardenDecor, User, HabitReminder, NotificationSetting, SleepEntry } from './types.ts';
 import NaraFriend from './components/NaraFriend.tsx';
+import OnboardingTour from './components/OnboardingTour.tsx';
 
 // --- SESSION & SECURITY UTILITIES ---
 const SESSION_TOKEN_KEY = 'anara_auth_token';
 const PENDING_VERIFICATION_KEY = 'anara_pending_email';
+const ONBOARDING_DONE_KEY = 'anara_onboarding_completed';
 const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const AUTH_AUDIT_KEY = 'anara_auth_audit';
 
@@ -49,14 +51,14 @@ class AuthLogger {
 }
 
 const AuthUtils = {
-    generateToken: (email: string): string => btoa(JSON.stringify({ email, expiry: Date.now() + TOKEN_EXPIRY_MS })),
+    generateToken: (email: string): string => btoa(JSON.stringify({ email: email.toLowerCase(), expiry: Date.now() + TOKEN_EXPIRY_MS })),
     validateToken: (token: string | null): string | null => {
         if (!token) return null;
         try {
             const { email, expiry } = JSON.parse(atob(token));
             const isValid = Date.now() <= expiry;
             if (!isValid) AuthLogger.log('SESSION', email, 'FAILURE', { reason: 'Token Expired' });
-            return isValid ? email : null;
+            return isValid ? email.toLowerCase() : null;
         } catch { 
             return null; 
         }
@@ -66,10 +68,11 @@ const AuthUtils = {
 const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
-    const [showSignUp, setShowSignUp] = useState(true);
+    const [showSignUp, setShowSignUp] = useState(false); // Default to sign in if no session
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(() => localStorage.getItem(PENDING_VERIFICATION_KEY));
     const [activeTab, setActiveTab] = useState<Tab>(() => (localStorage.getItem('anaraActiveTab') as Tab) || Tab.Dashboard);
     const [isNaraFriendOpen, setIsNaraFriendOpen] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     // --- DATA STATE ---
     const [moodHistory, setMoodHistory] = useState<MoodEntry[]>(() => {
@@ -91,6 +94,10 @@ const App: React.FC = () => {
     const [gardenXp, setGardenXp] = useState<number>(() => Number(localStorage.getItem('anaraGardenXp') || '0'));
     const [isDarkMode, setIsDarkMode] = useState<boolean>(() => localStorage.getItem('anaraIsDarkMode') === 'true');
     const [isIslamicGuidanceOn, setIsIslamicGuidanceOn] = useState<boolean>(() => localStorage.getItem('anaraIslamicGuidance') === 'true');
+    const [habitReminder, setHabitReminder] = useState<HabitReminder>(() => {
+        const saved = localStorage.getItem('anaraHabitReminder');
+        return saved ? JSON.parse(saved) : { enabled: false, time: '09:00', habitsToRemind: [], frequency: 'Daily' };
+    });
 
     const saveAppState = useCallback(() => {
         if (isLoading) return;
@@ -105,11 +112,12 @@ const App: React.FC = () => {
             localStorage.setItem('anaraGardenXp', JSON.stringify(gardenXp));
             localStorage.setItem('anaraIsDarkMode', JSON.stringify(isDarkMode));
             localStorage.setItem('anaraIslamicGuidance', JSON.stringify(isIslamicGuidanceOn));
+            localStorage.setItem('anaraHabitReminder', JSON.stringify(habitReminder));
             localStorage.setItem('anaraActiveTab', activeTab);
         } catch (e) {
             console.error("Critical: Failed to save application state to local storage", e);
         }
-    }, [moodHistory, habits, journalEntries, cycles, dayLogs, sleepHistory, gardenDecor, gardenXp, isDarkMode, isIslamicGuidanceOn, activeTab, isLoading]);
+    }, [moodHistory, habits, journalEntries, cycles, dayLogs, sleepHistory, gardenDecor, gardenXp, isDarkMode, isIslamicGuidanceOn, habitReminder, activeTab, isLoading]);
 
     useEffect(() => {
         saveAppState();
@@ -124,6 +132,10 @@ const App: React.FC = () => {
                 const userRec = db.find((u: any) => u.email.toLowerCase() === validEmail.toLowerCase());
                 if (userRec?.isVerified) {
                     setUser({ name: userRec.name, email: userRec.email, profilePicture: userRec.profilePicture, isVerified: true });
+                    // Check if onboarding is needed
+                    if (!localStorage.getItem(ONBOARDING_DONE_KEY)) {
+                        setShowOnboarding(true);
+                    }
                 }
             }
             setTimeout(() => setIsLoading(false), 1000);
@@ -138,17 +150,24 @@ const App: React.FC = () => {
 
     const handleLogin = (email: string, pass?: string) => {
         const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
-        const userRec = db.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+        const userRec = db.find((u: any) => u.email.toLowerCase() === email.toLowerCase().trim());
         if (userRec && userRec.password === pass) {
             if (!userRec.isVerified) {
-                setUnverifiedEmail(email);
-                localStorage.setItem(PENDING_VERIFICATION_KEY, email);
+                setUnverifiedEmail(userRec.email);
+                localStorage.setItem(PENDING_VERIFICATION_KEY, userRec.email);
                 return false;
             }
-            localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(email));
+            localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(userRec.email));
             setUser({ name: userRec.name, email: userRec.email, profilePicture: userRec.profilePicture, isVerified: true });
+            AuthLogger.log('SIGN_IN', userRec.email, 'SUCCESS');
+            
+            if (!localStorage.getItem(ONBOARDING_DONE_KEY)) {
+                setShowOnboarding(true);
+            }
+            
             return true;
         }
+        AuthLogger.log('SIGN_IN', email, 'FAILURE', { reason: 'Credentials Mismatch' });
         throw new Error("Invalid credentials.");
     };
 
@@ -158,6 +177,11 @@ const App: React.FC = () => {
         setActiveTab(Tab.Dashboard);
     };
 
+    const finishOnboarding = () => {
+        setShowOnboarding(false);
+        localStorage.setItem(ONBOARDING_DONE_KEY, 'true');
+    };
+
     if (isLoading) return <SplashScreen />;
 
     if (unverifiedEmail) {
@@ -165,14 +189,17 @@ const App: React.FC = () => {
             email={unverifiedEmail} 
             onVerified={() => {
                 const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
-                const idx = db.findIndex((u: any) => u.email.toLowerCase() === unverifiedEmail.toLowerCase());
+                const normalized = unverifiedEmail.toLowerCase().trim();
+                const idx = db.findIndex((u: any) => u.email.toLowerCase() === normalized);
                 if (idx !== -1) {
                     db[idx].isVerified = true;
                     localStorage.setItem('anaraAuthDB', JSON.stringify(db));
-                    localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(unverifiedEmail));
+                    localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(normalized));
                     setUser({ name: db[idx].name, email: db[idx].email, isVerified: true });
                     setUnverifiedEmail(null);
                     localStorage.removeItem(PENDING_VERIFICATION_KEY);
+                    AuthLogger.log('VERIFY', normalized, 'SUCCESS');
+                    setShowOnboarding(true); // Trigger tour for newly verified users
                 }
             }} 
             onBackToSignIn={() => { 
@@ -186,10 +213,16 @@ const App: React.FC = () => {
         return showSignUp ? (
             <SignUpScreen onSignUp={(n, e, p) => {
                 const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
-                db.push({ name: n, email: e.toLowerCase(), password: p, isVerified: false });
+                const normalizedEmail = e.toLowerCase().trim();
+                if (db.some((u: any) => u.email.toLowerCase() === normalizedEmail)) {
+                    alert("This email is already registered.");
+                    return;
+                }
+                db.push({ name: n, email: normalizedEmail, password: p, isVerified: false });
                 localStorage.setItem('anaraAuthDB', JSON.stringify(db));
-                setUnverifiedEmail(e.toLowerCase());
-                localStorage.setItem(PENDING_VERIFICATION_KEY, e.toLowerCase());
+                setUnverifiedEmail(normalizedEmail);
+                localStorage.setItem(PENDING_VERIFICATION_KEY, normalizedEmail);
+                AuthLogger.log('SIGN_UP', normalizedEmail, 'SUCCESS');
             }} onSwitchToSignIn={() => setShowSignUp(false)} />
         ) : (
             <SignInScreen onLogin={handleLogin} onSwitchToSignUp={() => setShowSignUp(true)} />
@@ -208,18 +241,18 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#FFFBF9] dark:bg-slate-900 flex flex-col relative overflow-x-hidden" style={{ fontFamily: "'Quicksand', sans-serif" }}>
-            <PomegranateFruitIcon className="absolute top-20 right-0 w-64 h-64 text-[#F4ABC4] opacity-10 dark:opacity-5 transform -rotate-12 translate-x-1/4 pointer-events-none z-0" />
-            <header className="flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm sticky top-0 z-20 border-b border-pink-50 dark:border-slate-700">
-                <button onClick={() => setActiveTab(Tab.Menu)} className="p-2 rounded-xl hover:bg-pink-50 dark:hover:bg-slate-700 transition-colors z-30">
-                    <MenuIcon className="h-6 w-6 text-[#E18AAA]" />
+            <SakuraBranchIcon className="absolute top-20 right-0 w-64 h-64 text-[#FFB7C5] opacity-20 dark:opacity-10 transform -rotate-12 translate-x-1/4 pointer-events-none z-0 animate-gentle-float" />
+            <header className="flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md shadow-sm sticky top-0 z-20 border-b border-sakura-100 dark:border-slate-700">
+                <button onClick={() => setActiveTab(Tab.Menu)} className="p-2 rounded-xl hover:bg-sakura-50 dark:hover:bg-slate-700 transition-colors z-30">
+                    <MenuIcon className="h-6 w-6 text-[#FF839B]" />
                 </button>
                 <div className="flex items-center absolute inset-x-0 justify-center cursor-pointer pointer-events-none" onClick={() => setActiveTab(Tab.Dashboard)}>
                     <div className="flex items-center pointer-events-auto">
-                        <AnaraLogo className="h-10 w-10 text-[#F4ABC4] mr-2"/>
-                        <h1 className="text-2xl font-bold text-[#E18AAA] dark:text-pink-400 font-serif">Anara</h1>
+                        <AnaraLogo className="h-10 w-10 text-[#FFB7C5] mr-2"/>
+                        <h1 className="text-2xl font-bold text-[#FF839B] dark:text-sakura-400 font-serif">Anara</h1>
                     </div>
                 </div>
-                <button onClick={() => setActiveTab(Tab.Settings)} className="h-10 w-10 flex items-center justify-center rounded-full bg-pink-100 dark:bg-slate-700 text-pink-500 font-bold overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-md z-30 transition-transform active:scale-90">
+                <button onClick={() => setActiveTab(Tab.Settings)} className="h-10 w-10 flex items-center justify-center rounded-full bg-sakura-100 dark:bg-slate-700 text-sakura-500 font-bold overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-md z-30 transition-transform active:scale-90">
                     {user?.profilePicture ? <img src={user.profilePicture} alt="Profile" className="h-full w-full object-cover" /> : user?.name?.[0]?.toUpperCase()}
                 </button>
             </header>
@@ -236,16 +269,16 @@ const App: React.FC = () => {
                         case Tab.Period: return <PeriodTrackerScreen cycles={cycles} onUpdateCycles={setCycles} dayLogs={dayLogs} setDayLogs={setDayLogs} habits={habits} setHabits={setHabits} isIslamicGuidanceOn={isIslamicGuidanceOn} />;
                         case Tab.Sleep: return <SleepTrackerScreen user={user} sleepHistory={sleepHistory} onAddEntry={(e) => setSleepHistory([...sleepHistory, e])} onDeleteEntry={(id) => setSleepHistory(sleepHistory.filter(e => e.id !== id))} />;
                         case Tab.Garden: return <GardenScreen habits={habits} gardenDecor={gardenDecor} onDecorChange={setGardenDecor} gardenXp={gardenXp} />;
-                        case Tab.Settings: return <SettingsScreen user={user} habits={habits} onLogout={handleLogout} onUpdateUser={setUser} habitReminder={{enabled:true, time:'09:00', habitsToRemind:[], frequency:'Daily'}} onSetHabitReminder={()=>{}} isDarkMode={isDarkMode} onSetIsDarkMode={setIsDarkMode} notifications={{}} onSetNotifications={()=>{}} isIslamicGuidanceOn={isIslamicGuidanceOn} onSetIslamicGuidanceOn={setIsIslamicGuidanceOn} />;
+                        case Tab.Settings: return <SettingsScreen user={user} habits={habits} onLogout={handleLogout} onUpdateUser={setUser} habitReminder={habitReminder} onSetHabitReminder={setHabitReminder} isDarkMode={isDarkMode} onSetIsDarkMode={setIsDarkMode} notifications={{}} onSetNotifications={()=>{}} isIslamicGuidanceOn={isIslamicGuidanceOn} onSetIslamicGuidanceOn={setIsIslamicGuidanceOn} />;
                         case Tab.Menu: return <MenuScreen user={user} onNavigate={setActiveTab} onLogout={handleLogout} />;
                         default: return <HomeScreen user={user} moodHistory={moodHistory} habits={habits} journalEntries={journalEntries} cycleData={{cycles, dayLogs}} onNavigate={setActiveTab} gardenXp={gardenXp} sleepHistory={sleepHistory} isIslamicGuidanceOn={isIslamicGuidanceOn} />;
                     }
                 })()}
             </main>
-            <footer className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-pink-100 dark:border-slate-700 z-50">
+            <footer className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-t border-sakura-100 dark:border-slate-700 z-50">
                 <nav className="grid grid-cols-7 h-16 max-w-4xl mx-auto">
                     {navItems.map(({ tab, Icon, label }) => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center justify-center transition-all ${activeTab === tab ? 'text-[#E18AAA] dark:text-pink-400' : 'text-[#8D7F85] dark:text-slate-400'}`}>
+                        <button key={tab} id={`nav-btn-${tab}`} onClick={() => setActiveTab(tab)} className={`flex flex-col items-center justify-center transition-all ${activeTab === tab ? 'text-[#FF839B] dark:text-sakura-400' : 'text-[#8D7F85] dark:text-slate-400'}`}>
                             <Icon className="h-6 w-6" />
                             <span className="text-[8px] font-bold mt-1 uppercase tracking-tighter">{label}</span>
                         </button>
@@ -253,11 +286,12 @@ const App: React.FC = () => {
                 </nav>
             </footer>
             <div className="fixed bottom-24 right-4 z-40">
-                <button onClick={() => setIsNaraFriendOpen(!isNaraFriendOpen)} className="bg-gradient-to-br from-pink-400 to-purple-500 text-white rounded-full p-4 shadow-xl hover:scale-110 transform transition-all ring-4 ring-white/30 backdrop-blur-sm">
+                <button id="nara-trigger-btn" onClick={() => setIsNaraFriendOpen(!isNaraFriendOpen)} className="bg-gradient-to-br from-sakura-400 to-purple-500 text-white rounded-full p-4 shadow-xl hover:scale-110 transform transition-all ring-4 ring-white/30 backdrop-blur-sm">
                     <SparklesIcon className="w-7 h-7"/>
                 </button>
             </div>
             {isNaraFriendOpen && <NaraFriend isOpen={isNaraFriendOpen} onClose={() => setIsNaraFriendOpen(false)} user={user} appData={{ moodHistory, habits, journalEntries }} onJournalEntry={setJournalEntries} />}
+            {showOnboarding && <OnboardingTour user={user} onComplete={finishOnboarding} />}
         </div>
     );
 };

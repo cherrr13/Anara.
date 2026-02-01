@@ -1,7 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
-import { GoogleGenAI } from "@google/genai";
-import { AnaraLogo, EyeIcon, EyeOffIcon, CheckIcon, XMarkIcon, WarningIcon, GoogleIcon, AppleIcon, FacebookIcon, SparklesIcon } from '../icons';
+import React, { useState, useMemo, useEffect } from 'react';
+import { AnaraLogo, EyeIcon, EyeOffIcon, CheckIcon, XMarkIcon, WarningIcon, SparklesIcon } from '../icons';
 
 interface SignUpScreenProps {
     onSignUp: (name: string, email: string, password?: string) => void;
@@ -15,78 +14,64 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
-    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [socialLoading, setSocialLoading] = useState<string | null>(null);
+    
+    // Dynamic placeholders for multilingual welcoming
+    const [placeholderIndex, setPlaceholderIndex] = useState(0);
+    const placeholders = ["Your Name", "Nama Anda", "اسمك", "이름", "Dein Name"];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setPlaceholderIndex(prev => (prev + 1) % placeholders.length);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
 
     const requirements = useMemo(() => [
-        { label: 'Min 10 characters', met: password.length >= 10 },
-        { label: 'Uppercase & Lowercase', met: /[A-Z]/.test(password) && /[a-z]/.test(password) },
-        { label: 'Numbers & Symbols', met: /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password) },
-    ], [password]);
+        { label: 'Length ≥ 10', met: password.length >= 10 },
+        { label: 'Complexity (Aa1!)', met: /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password) },
+        { label: 'Identity Match', met: password === confirmPassword && confirmPassword !== '' },
+    ], [password, confirmPassword]);
 
-    const isPasswordStrong = requirements.every(r => r.met);
-    const isMatching = password === confirmPassword && confirmPassword !== '';
+    const strength = useMemo(() => {
+        let s = 0;
+        if (password.length > 0) s += 20;
+        if (password.length >= 10) s += 20;
+        if (/[A-Z]/.test(password)) s += 20;
+        if (/[0-9]/.test(password)) s += 20;
+        if (/[^A-Za-z0-9]/.test(password)) s += 20;
+        return s;
+    }, [password]);
 
-    const verifyEmailAuthenticity = async (emailAddr: string): Promise<{ isReal: boolean, reason: string }> => {
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            const prompt = `Analyze this email address for authenticity: "${emailAddr}". 
-            Is it likely a real personal account from a reputable provider (like Google, Yahoo, Outlook, or a verified organization)? 
-            Reject disposable domains (mailinator, temp-mail, etc.) or obvious gibberish.
-            Return strictly JSON: {"isReal": boolean, "reason": "concise explanation if fake"}`;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: prompt,
-                config: { responseMimeType: 'application/json' }
-            });
-
-            return JSON.parse(response.text || '{"isReal": true}');
-        } catch {
-            return { isReal: true, reason: "" }; // Fallback to basic regex if AI fails
-        }
-    };
+    const isReady = requirements.every(r => r.met) && name.trim().length > 1 && email.includes('@');
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         
-        if (!isPasswordStrong || !isMatching) {
-            setError("Please fulfill all security requirements.");
+        if (!isReady) {
+            setError("Please finalize all spiritual security markers and ensure a valid email.");
+            if ('vibrate' in navigator) navigator.vibrate([40, 40, 40]);
             return;
         }
 
-        setIsCheckingEmail(true);
-        const { isReal, reason } = await verifyEmailAuthenticity(email);
-        
-        if (!isReal) {
-            setError(reason || "This email appears to be a temporary or dummy account. Please use a genuine account.");
-            setIsCheckingEmail(false);
+        // Local check for existing user
+        const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
+        if (db.some((u: any) => u.email.toLowerCase() === email.toLowerCase().trim())) {
+            setError("This soul already exists in our sanctuary. Please sign in.");
+            if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
             return;
         }
 
         setIsLoading(true);
+        // Direct transition to onboarding
         setTimeout(() => {
-             try {
-                onSignUp(name, email, password);
-             } catch (err: any) {
-                setError(err.message || "Failed to create account.");
-                setIsLoading(false);
-                setIsCheckingEmail(false);
-             }
+            onSignUp(name.trim(), email.toLowerCase().trim(), password);
         }, 800);
     };
 
-    const handleSocialSignUp = (provider: string) => {
-        setSocialLoading(provider);
-        setTimeout(() => {
-            onSignUp(`${provider} User`, `${provider.toLowerCase()}.user@example.com`, `${provider}SocialAuthBypassed`);
-        }, 1200);
-    };
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6 animate-fade-in">
             <div className="w-full max-w-sm relative">
                 <div className="text-center mb-8 relative z-10">
                     <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-3xl shadow-lg inline-block mb-4 border border-white/50 dark:border-slate-700 animate-float">
@@ -99,54 +84,59 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                 <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-2xl rounded-[3rem] shadow-2xl p-8 border border-white dark:border-slate-700/50 relative z-10">
                     <form onSubmit={handleSignUp} className="space-y-4">
                         {error && (
-                            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300 rounded-2xl text-[10px] font-bold text-center border border-red-100 dark:border-red-800/50 animate-pop flex items-center gap-2">
+                            <div className="p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-2xl text-[10px] font-bold text-center border border-rose-100 dark:border-rose-800/50 animate-pop flex items-center gap-2">
                                 <WarningIcon className="w-4 h-4 shrink-0" />
                                 <span>{error}</span>
                             </div>
                         )}
                         
                         <div className="space-y-1">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Full Name</label>
+                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Preferred Name</label>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="Your Name"
-                                required
-                                className="w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-pink-100 transition-all dark:text-slate-100 outline-none text-sm"
+                                placeholder={placeholders[placeholderIndex]}
+                                className="w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-pink-100 transition-all dark:text-slate-100 outline-none text-sm shadow-inner"
                             />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Email (Google Preferred)</label>
+                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Email Connection</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="name@gmail.com"
-                                required
-                                className="w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-pink-100 transition-all dark:text-slate-100 outline-none text-sm"
+                                className="w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-pink-100 transition-all dark:text-slate-100 outline-none text-sm shadow-inner"
                             />
                         </div>
 
-                        <div className="space-y-1">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Password</label>
+                        <div className="space-y-2">
+                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Spirit Password</label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    required
-                                    className="w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-pink-100 transition-all dark:text-slate-100 outline-none pr-12 text-sm"
+                                    className="w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-pink-100 transition-all dark:text-slate-100 outline-none pr-12 text-sm shadow-inner"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-[#E18AAA] transition-colors"
+                                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-[#E18AAA]"
                                 >
                                     {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                                 </button>
+                            </div>
+                            
+                            {/* Strength Meter */}
+                            <div className="h-1 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full transition-all duration-700 ${strength < 40 ? 'bg-rose-400' : strength < 80 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                                    style={{ width: `${strength}%` }}
+                                ></div>
                             </div>
                         </div>
 
@@ -157,21 +147,17 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="••••••••"
-                                required
-                                className={`w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border rounded-xl focus:ring-4 transition-all dark:text-slate-100 outline-none text-sm ${isMatching ? 'border-green-300 ring-green-50' : 'border-gray-100 dark:border-slate-700'}`}
+                                className={`w-full p-3.5 bg-white/50 dark:bg-slate-900/40 border rounded-xl focus:ring-4 transition-all dark:text-slate-100 outline-none text-sm shadow-inner ${password !== '' && confirmPassword !== '' ? (password === confirmPassword ? 'border-emerald-200 ring-emerald-50' : 'border-rose-200 ring-rose-50') : 'border-gray-100 dark:border-slate-700'}`}
                             />
                         </div>
 
-                        {/* Complexity Checklist */}
-                        <div className="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded-2xl border border-gray-100 dark:border-slate-700 space-y-1">
+                        <div className="p-4 bg-gray-50/50 dark:bg-slate-900/30 rounded-2xl border border-gray-100 dark:border-slate-700 space-y-2 shadow-inner">
                             {requirements.map((req, i) => (
-                                <div key={i} className="flex items-center gap-2 text-[9px] uppercase tracking-wider">
-                                    {req.met ? (
-                                        <CheckIcon className="w-3 h-3 text-green-500" />
-                                    ) : (
-                                        <XMarkIcon className="w-3 h-3 text-gray-300" />
-                                    )}
-                                    <span className={req.met ? 'text-green-600 dark:text-green-400 font-bold' : 'text-gray-400 dark:text-slate-500'}>
+                                <div key={i} className="flex items-center gap-2 text-[8px] uppercase tracking-[0.15em] font-bold">
+                                    <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${req.met ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-slate-700'}`}>
+                                        <CheckIcon className={`w-2.5 h-2.5 ${req.met ? 'text-white' : 'text-gray-400'}`} />
+                                    </div>
+                                    <span className={req.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-slate-500'}>
                                         {req.label}
                                     </span>
                                 </div>
@@ -180,72 +166,32 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
 
                         <button
                             type="submit"
-                            disabled={isLoading || isCheckingEmail || !!socialLoading || !isPasswordStrong || !isMatching}
-                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-4 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:scale-100 active:scale-95 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                            disabled={!isReady || isLoading}
+                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-4 rounded-2xl shadow-xl hover:brightness-110 transition-all active:scale-95 text-[10px] uppercase tracking-[0.3em] disabled:opacity-40 disabled:active:scale-100 flex items-center justify-center gap-2"
                         >
-                             {isCheckingEmail ? (
-                                 <>
-                                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
-                                    Analyzing Soul...
-                                 </>
-                             ) : isLoading ? 'Cultivating...' : 'Create Sanctuary'}
+                             {isLoading ? (
+                                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                             ) : <SparklesIcon className="w-4 h-4" />}
+                             {isLoading ? 'Cultivating...' : 'Begin Journey'}
                         </button>
                     </form>
-
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-slate-700"></div></div>
-                        <div className="relative flex justify-center text-[9px] font-bold uppercase tracking-[0.3em]"><span className="bg-white dark:bg-slate-800 px-3 text-gray-300">Fast Entry</span></div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            type="button"
-                            onClick={() => handleSocialSignUp('Google')}
-                            disabled={isLoading || isCheckingEmail || !!socialLoading}
-                            className="w-full bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 text-gray-700 dark:text-slate-200 font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
-                        >
-                            {socialLoading === 'Google' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#4285F4] border-t-transparent"></div> : <GoogleIcon className="w-4 h-4" />}
-                            Continue with Google
-                        </button>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => handleSocialSignUp('Apple')}
-                                disabled={isLoading || isCheckingEmail || !!socialLoading}
-                                className="bg-black text-white font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-900 transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
-                            >
-                                {socialLoading === 'Apple' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <AppleIcon className="w-4 h-4" />}
-                                Apple
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleSocialSignUp('Facebook')}
-                                disabled={isLoading || isCheckingEmail || !!socialLoading}
-                                className="bg-[#1877F2] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-[#166fe5] transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
-                            >
-                                {socialLoading === 'Facebook' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <FacebookIcon className="w-4 h-4" />}
-                                Facebook
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <p className="text-center text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-8">
-                    Returning to the garden?{' '}
+                    Returning Friend?{' '}
                     <button onClick={onSwitchToSignIn} className="text-[#E18AAA] dark:text-pink-400 hover:underline">
-                        Enter here
+                        Enter Here
                     </button>
                 </p>
             </div>
             <style>{`
                 @keyframes float {
                     0% { transform: translateY(0px); }
-                    50% { transform: translateY(-5px); }
+                    50% { transform: translateY(-10px); }
                     100% { transform: translateY(0px); }
                 }
                 .animate-float {
-                    animation: float 5s ease-in-out infinite;
+                    animation: float 4s ease-in-out infinite;
                 }
             `}</style>
         </div>

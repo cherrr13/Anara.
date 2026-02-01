@@ -116,6 +116,77 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ user, habits, onLogout,
                 </div>
             </SettingsCard>
 
+            <SettingsCard title="Ritual Reminders">
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-pink-50 dark:bg-pink-900/40 rounded-xl text-pink-500"><BellIcon className="w-6 h-6" /></div>
+                            <div>
+                                <p className="font-bold font-sans text-gray-800 dark:text-slate-100 text-sm uppercase tracking-wider">Daily Nudges</p>
+                                <p className="text-xs font-sans text-gray-500 dark:text-slate-400">Stay consistent with your rituals</p>
+                            </div>
+                        </div>
+                        <ToggleSwitch 
+                            enabled={habitReminder.enabled} 
+                            onChange={(enabled) => onSetHabitReminder({ ...habitReminder, enabled })} 
+                        />
+                    </div>
+
+                    {habitReminder.enabled && (
+                        <div className="space-y-6 pt-6 border-t border-gray-50 dark:border-slate-700 animate-fade-in">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-2 block">Reminder Time</label>
+                                    <input 
+                                        type="time" 
+                                        value={habitReminder.time}
+                                        onChange={(e) => onSetHabitReminder({ ...habitReminder, time: e.target.value })}
+                                        className="w-full p-4 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-2xl text-base font-sans focus:ring-2 focus:ring-[#F4ABC4] outline-none dark:text-slate-200"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-2 block">Frequency</label>
+                                    <select 
+                                        value={habitReminder.frequency}
+                                        onChange={(e) => onSetHabitReminder({ ...habitReminder, frequency: e.target.value as any })}
+                                        className="w-full p-4 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-2xl text-sm font-sans focus:ring-2 focus:ring-[#F4ABC4] outline-none dark:text-slate-200"
+                                    >
+                                        <option value="Daily">Daily</option>
+                                        <option value="Weekdays">Weekdays</option>
+                                        <option value="Weekends">Weekends</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-bold font-sans text-gray-400 uppercase tracking-widest mb-3 block">Target Rituals</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {habits.map(habit => {
+                                        const isSelected = habitReminder.habitsToRemind.includes(habit.id);
+                                        return (
+                                            <button
+                                                key={habit.id}
+                                                onClick={() => {
+                                                    const newHabits = isSelected 
+                                                        ? habitReminder.habitsToRemind.filter(id => id !== habit.id)
+                                                        : [...habitReminder.habitsToRemind, habit.id];
+                                                    onSetHabitReminder({ ...habitReminder, habitsToRemind: newHabits });
+                                                    if ('vibrate' in navigator) navigator.vibrate(5);
+                                                }}
+                                                className={`px-4 py-2 rounded-xl text-[10px] font-bold font-sans border-2 transition-all ${isSelected ? 'bg-pink-50 border-[#E18AAA] text-[#E18AAA] shadow-sm' : 'bg-gray-50 border-transparent text-gray-400 dark:bg-slate-700'}`}
+                                            >
+                                                {habit.name}
+                                            </button>
+                                        );
+                                    })}
+                                    {habits.length === 0 && <p className="text-xs text-gray-400 italic">No rituals created yet.</p>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </SettingsCard>
+
             <SettingsCard title="Application Preferences">
                 <div className="space-y-6">
                     <div className="flex justify-between items-center py-2">

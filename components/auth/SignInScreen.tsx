@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AnaraLogo, EyeIcon, EyeOffIcon, GoogleIcon, AppleIcon, FacebookIcon } from '../icons';
+import { AnaraLogo, EyeIcon, EyeOffIcon, GoogleIcon, AppleIcon, FacebookIcon, CheckIcon, WarningIcon } from '../icons';
 
 interface SignInScreenProps {
     onLogin: (email: string, password?: string) => void;
@@ -11,54 +11,85 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onLogin, onSwitchToSignUp }
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
-    const [socialLoading, setSocialLoading] = useState<string | null>(null);
     const [error, setError] = useState('');
-
-    const validateEmail = (email: string) => {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    };
+    const [showRecovery, setShowRecovery] = useState(false);
+    const [recoverySent, setRecoverySent] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         
         if (!email.trim() || !password) {
-            setError("Please fill in all fields.");
-            return;
-        }
-
-        if (!validateEmail(email)) {
-            setError("Please enter a valid email address.");
+            setError("Please provide your credentials.");
+            if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
             return;
         }
 
         setIsLoading(true);
+        // Artificial delay for that "secure check" feeling
         setTimeout(() => {
             try {
                 onLogin(email, password);
+                if ('vibrate' in navigator) navigator.vibrate(10);
             } catch (err: any) {
-                setError(err.message || "Invalid credentials. Please try again.");
+                setError(err.message || "Credential mismatch. Please try again.");
                 setIsLoading(false);
+                if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
             }
-        }, 800);
-    };
-
-    const handleSocialSignIn = (provider: string) => {
-        setSocialLoading(provider);
-        // Simulate OAuth flow
-        setTimeout(() => {
-            onLogin(`${provider.toLowerCase()}.user@example.com`, `${provider}VerifiedSession`);
         }, 1200);
     };
 
+    const handleRecovery = (e: React.FormEvent) => {
+        e.preventDefault();
+        setRecoverySent(true);
+        setTimeout(() => {
+            setShowRecovery(false);
+            setRecoverySent(false);
+        }, 3000);
+    };
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6 animate-fade-in">
+            {/* Password Recovery Modal */}
+            {showRecovery && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl animate-pop border border-pink-50 dark:border-slate-700">
+                        {!recoverySent ? (
+                            <form onSubmit={handleRecovery} className="text-center space-y-6">
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-full inline-block">
+                                    <WarningIcon className="w-8 h-8 text-indigo-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100">Recover Sanctuary</h3>
+                                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">Enter your email and we'll send recovery instructions.</p>
+                                </div>
+                                <input 
+                                    type="email" 
+                                    required
+                                    placeholder="your@email.com"
+                                    className="w-full p-4 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-200 transition-all dark:text-slate-100"
+                                />
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setShowRecovery(false)} className="flex-1 py-3 text-xs font-bold text-gray-400 uppercase tracking-widest">Cancel</button>
+                                    <button type="submit" className="flex-1 py-3 bg-[#E18AAA] text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all">Send Link</button>
+                                </div>
+                            </form>
+                        ) : (
+                            <div className="text-center space-y-4 py-6">
+                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-full inline-block">
+                                    <CheckIcon className="w-8 h-8 text-emerald-500" />
+                                </div>
+                                <h3 className="text-xl font-bold text-emerald-600">Soul Link Sent</h3>
+                                <p className="text-sm text-gray-500">Check your inbox to reset your password.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="w-full max-w-sm relative">
-                <div className="absolute -top-12 -left-12 w-64 h-64 bg-pink-400/10 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-indigo-400/10 rounded-full blur-[100px] animate-pulse"></div>
-                
                 <div className="text-center mb-10 relative z-10">
                     <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-5 rounded-[2.5rem] shadow-xl inline-block mb-6 border border-white/50 dark:border-slate-700 animate-float">
                          <AnaraLogo className="h-16 w-16 text-[#F4ABC4]"/>
@@ -70,8 +101,9 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onLogin, onSwitchToSignUp }
                 <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-2xl rounded-[3rem] shadow-2xl p-8 border border-white dark:border-slate-700/50 relative z-10">
                     <form onSubmit={handleLogin} className="space-y-6">
                         {error && (
-                            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300 rounded-2xl text-xs font-bold text-center border border-red-100 dark:border-red-800/50 animate-pop">
-                                {error}
+                            <div className="p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-300 rounded-2xl text-[10px] font-bold text-center border border-rose-100 dark:border-rose-800/50 animate-pop flex items-center gap-2">
+                                <WarningIcon className="w-4 h-4 shrink-0" />
+                                <span>{error}</span>
                             </div>
                         )}
                         
@@ -87,7 +119,10 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onLogin, onSwitchToSignUp }
                         </div>
 
                         <div className="space-y-2">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest ml-1">Password</label>
+                            <div className="flex justify-between items-center px-1">
+                                <label className="block text-gray-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest">Password</label>
+                                <button type="button" onClick={() => setShowRecovery(true)} className="text-[9px] font-bold text-[#E18AAA] uppercase tracking-widest hover:underline">Forgot?</button>
+                            </div>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
@@ -106,58 +141,32 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onLogin, onSwitchToSignUp }
                             </div>
                         </div>
 
+                        <div className="flex items-center gap-3 px-1">
+                            <button 
+                                type="button"
+                                onClick={() => setRememberMe(!rememberMe)}
+                                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${rememberMe ? 'bg-[#E18AAA] border-[#E18AAA]' : 'bg-transparent border-gray-200 dark:border-slate-600'}`}
+                            >
+                                {rememberMe && <CheckIcon className="w-3 h-3 text-white" />}
+                            </button>
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest cursor-pointer select-none" onClick={() => setRememberMe(!rememberMe)}>Remember session</span>
+                        </div>
+
                         <button
                             type="submit"
-                            disabled={isLoading || !!socialLoading}
-                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-70 disabled:scale-100 active:scale-95 uppercase tracking-[0.2em] text-xs"
+                            disabled={isLoading}
+                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-70 disabled:scale-100 active:scale-95 uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-2"
                         >
-                            {isLoading ? 'Verifying...' : 'Enter Sanctuary'}
+                            {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>}
+                            {isLoading ? 'Decrypting Soul...' : 'Enter Sanctuary'}
                         </button>
                     </form>
-
-                    <div className="relative my-8">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-slate-700"></div></div>
-                        <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest"><span className="bg-white dark:bg-slate-800 px-4 text-gray-300">Or connect with</span></div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            type="button"
-                            onClick={() => handleSocialSignIn('Google')}
-                            disabled={isLoading || !!socialLoading}
-                            className="w-full bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 text-gray-700 dark:text-slate-200 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-slate-600 transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
-                        >
-                            {socialLoading === 'Google' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#4285F4] border-t-transparent"></div> : <GoogleIcon className="w-4 h-4" />}
-                            Google
-                        </button>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => handleSocialSignIn('Apple')}
-                                disabled={isLoading || !!socialLoading}
-                                className="bg-black text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-900 transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
-                            >
-                                {socialLoading === 'Apple' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <AppleIcon className="w-4 h-4" />}
-                                Apple
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleSocialSignIn('Facebook')}
-                                disabled={isLoading || !!socialLoading}
-                                className="bg-[#1877F2] text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:bg-[#166fe5] transition-all active:scale-95 shadow-sm text-[10px] uppercase tracking-widest"
-                            >
-                                {socialLoading === 'Facebook' ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <FacebookIcon className="w-4 h-4" />}
-                                Facebook
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
-                <p className="text-center text-gray-500 dark:text-slate-400 text-sm mt-10">
-                    New to the garden?{' '}
-                    <button onClick={onSwitchToSignUp} className="font-bold text-[#E18AAA] dark:text-pink-400 hover:underline hover:text-pink-600 transition-colors">
-                        Create your space
+                <p className="text-center text-gray-500 dark:text-slate-400 text-xs mt-10 font-bold uppercase tracking-widest">
+                    New Friend?{' '}
+                    <button onClick={onSwitchToSignUp} className="text-[#E18AAA] dark:text-pink-400 hover:underline transition-colors">
+                        Begin Journey
                     </button>
                 </p>
             </div>

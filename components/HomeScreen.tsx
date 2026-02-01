@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { MoodEntry, Habit, JournalEntry, Cycle, DayLog, Tab, User, SleepEntry } from '../types.ts';
@@ -39,6 +38,8 @@ interface DashboardProps {
 const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journalEntries, cycleData, onNavigate, gardenXp, sleepHistory, isIslamicGuidanceOn }) => {
     const [aiInsight, setAiInsight] = useState<string | null>(null);
     const [isInsightLoading, setIsInsightLoading] = useState(false);
+    const [affirmation, setAffirmation] = useState<string | null>(null);
+    const [isAffirmationLoading, setIsAffirmationLoading] = useState(false);
     const [showShareToast, setShowShareToast] = useState(false);
     
     // State for the motivational quote
@@ -93,7 +94,7 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
         setIsInsightLoading(true);
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            const prompt = `Greeting for ${user.name}. Status: Mood is ${summary.latestMood}, ${summary.habitRate}% habits done. Give 1 soulful greeting. Max 15 words.`;
+            const prompt = `Greeting for ${user.name} in a Zen, Sakura-themed wellness app. Status: Mood is ${summary.latestMood}, ${summary.habitRate}% habits done. Give 1 soulful greeting. Max 15 words.`;
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: prompt,
@@ -101,13 +102,49 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
             });
             if (response.text) setAiInsight(response.text.trim());
         } catch {
-            setAiInsight(`A beautiful day for a beautiful soul. Let's bloom, ${user.name}.`);
+            setAiInsight(`Peace blooms within you, ${user.name}. Let today be a gentle dance.`);
         } finally { setIsInsightLoading(false); }
+    };
+
+    const fetchAffirmation = async () => {
+        if (!user) return;
+        setIsAffirmationLoading(true);
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            
+            const isFirstUse = summary.latestMood === 'Not Set' && summary.habitRate === 0 && summary.level === 1;
+            
+            let prompt = `Generate a powerful, personalized "I AM" affirmation for ${user.name}. 
+            Context: Mood is ${summary.latestMood}, Daily Habit Completion: ${summary.habitRate}%, Garden Growth Level: ${summary.level}. 
+            Tone: Ethereal, grounded, encouraging. Length: Max 12 words. No quotes.`;
+
+            if (isFirstUse) {
+                prompt = `Generate a welcoming, soulful "I AM" affirmation for ${user.name} who is just beginning their wellness sanctuary today. 
+                Focus on the potential for growth, new beginnings, and inner peace. 
+                Tone: Ethereal, grounded, very encouraging. Length: Max 12 words. No quotes.`;
+            }
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: prompt,
+                config: { maxOutputTokens: 60 }
+            });
+            
+            if (response.text) {
+                setAffirmation(response.text.trim().replace(/^"|"$/g, ''));
+            }
+        } catch {
+            const isFirstUse = summary.latestMood === 'Not Set' && summary.habitRate === 0;
+            setAffirmation(isFirstUse 
+                ? "I am a seed of infinite potential, ready to bloom in my own time." 
+                : "I am a vessel of peace, growing stronger with every conscious breath.");
+        } finally { setIsAffirmationLoading(false); }
     };
 
     useEffect(() => {
         fetchInsight();
-    }, [user?.name, summary.latestMood, summary.habitRate]);
+        fetchAffirmation();
+    }, [user?.name, summary.latestMood, summary.habitRate, summary.level]);
 
     return (
         <div className="space-y-8 pb-4 animate-fade-in">
@@ -118,7 +155,7 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                         Sanctuary
                     </h2>
                     <p className="text-base font-sans text-[#8D7F85] dark:text-slate-400 mt-1 italic">
-                        {isInsightLoading ? 'Brewing your briefing...' : aiInsight}
+                        {isInsightLoading ? 'Waiting for the petals to settle...' : aiInsight}
                     </p>
                 </div>
             </div>
@@ -128,15 +165,43 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                 <button onClick={() => onNavigate(Tab.Mood)} className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-orange-100 dark:bg-orange-900/30 rounded-3xl text-orange-700 dark:text-orange-200 font-bold text-xs uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
                     <MoodIcon className="w-5 h-5" /> Log Mood
                 </button>
-                <button onClick={() => onNavigate(Tab.Journal)} className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-pink-100 dark:bg-pink-900/30 rounded-3xl text-pink-700 dark:text-pink-200 font-bold text-xs uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
-                    <JournalIcon className="w-5 h-5" /> New Memory
+                <button onClick={() => onNavigate(Tab.Journal)} className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-sakura-100 dark:bg-sakura-900/30 rounded-3xl text-sakura-700 dark:text-sakura-200 font-bold text-xs uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
+                    <JournalIcon className="w-5 h-5" /> Reflect
                 </button>
                 <button onClick={() => onNavigate(Tab.Period)} className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-rose-100 dark:bg-rose-900/30 rounded-3xl text-rose-700 dark:text-rose-200 font-bold text-xs uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
                     <PeriodIcon className="w-5 h-5" /> Body Log
                 </button>
                 <button onClick={() => onNavigate(Tab.Habit)} className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-3xl text-emerald-700 dark:text-emerald-200 font-bold text-xs uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
-                    <HabitIcon className="w-5 h-5" /> Habits
+                    <HabitIcon className="w-5 h-5" /> Rituals
                 </button>
+            </div>
+
+            {/* AI Affirmation Section - Visually Distinct */}
+            <div className="bg-gradient-to-br from-amber-50 to-teal-50 dark:from-slate-800 dark:to-teal-950/20 rounded-[2.5rem] p-6 shadow-lg border border-amber-100/50 dark:border-slate-700 relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none">
+                    <SparklesIcon className="w-full h-full text-amber-500" />
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                    <div className="p-3 bg-white dark:bg-slate-700 rounded-2xl shadow-sm text-amber-500 animate-pulse">
+                        <MoonStarIcon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-[10px] font-bold font-sans text-amber-600 dark:text-amber-400 uppercase tracking-[0.2em] mb-1">Personal Affirmation</p>
+                        <div className="min-h-[1.5rem]">
+                            {isAffirmationLoading ? (
+                                <div className="flex gap-1 items-center">
+                                    <div className="w-1.5 h-1.5 bg-amber-300 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                    <div className="w-1.5 h-1.5 bg-amber-300 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                    <div className="w-1.5 h-1.5 bg-amber-300 rounded-full animate-bounce"></div>
+                                </div>
+                            ) : (
+                                <p className="text-lg font-serif font-bold text-gray-800 dark:text-slate-100 leading-tight">
+                                    {affirmation}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Summary Grid */}
@@ -144,11 +209,11 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between group hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-3 bg-rose-50 dark:bg-rose-900/30 rounded-2xl text-rose-500"><PeriodIcon className="w-5 h-5" /></div>
-                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Rest</span>
+                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Cycle</span>
                     </div>
                     <div>
                         <p className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100">{summary.cycleInfo}</p>
-                        <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Current Cycle</p>
+                        <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Current Nature</p>
                     </div>
                 </div>
 
@@ -157,22 +222,22 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                         <div className="p-3 bg-orange-50 dark:bg-orange-900/30 rounded-2xl text-orange-500">
                             {MoodIconMap[summary.latestMood] ? React.createElement(MoodIconMap[summary.latestMood], { className: "w-5 h-5" }) : <MoodIcon className="w-5 h-5" />}
                         </div>
-                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Spirit</span>
+                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Soul</span>
                     </div>
                     <div>
                         <p className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100">{summary.latestMood}</p>
-                        <p className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Daily Vibration</p>
+                        <p className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Today's Vibe</p>
                     </div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-between group hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl text-emerald-500"><HabitIcon className="w-5 h-5" /></div>
-                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Growth</span>
+                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Ritual</span>
                     </div>
                     <div>
                         <p className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100">{summary.habitRate}%</p>
-                        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rituals Done</p>
+                        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Habits Bloomed</p>
                     </div>
                 </div>
 
@@ -183,30 +248,30 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                     </div>
                     <div>
                         <p className="text-xl font-bold font-serif text-gray-800 dark:text-slate-100">Level {summary.level}</p>
-                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">{gardenXp} Total XP</p>
+                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Garden Growth</p>
                     </div>
                 </div>
             </div>
 
             {/* Daily Inspiration Card */}
-            <div className="bg-gradient-to-br from-[#E0D9FE] to-[#FCE7F3] dark:from-indigo-900/20 dark:to-purple-900/20 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group border border-white/50 dark:border-slate-700">
+            <div className="bg-gradient-to-br from-sakura-100 to-indigo-100 dark:from-sakura-950 dark:to-indigo-950 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden group border border-white/50 dark:border-slate-700">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-700"></div>
                 
                 <div className="flex justify-between items-center mb-6 relative z-10">
                     <div className="flex items-center gap-3">
-                        <div className="p-3 bg-white/40 dark:bg-slate-700/40 rounded-2xl text-purple-600 dark:text-purple-300 shadow-sm">
+                        <div className="p-3 bg-white/40 dark:bg-slate-700/40 rounded-2xl text-sakura-600 dark:text-sakura-300 shadow-sm">
                              <SparklesIcon className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold font-sans text-purple-900/50 dark:text-purple-100/50 uppercase tracking-[0.2em]">Daily Intention</p>
+                            <p className="text-[10px] font-bold font-sans text-sakura-900/50 dark:text-sakura-100/50 uppercase tracking-[0.2em]">Intention</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <button 
                             onClick={refreshQuote}
                             disabled={isRefreshingQuote}
-                            className={`p-3 text-purple-600 dark:text-purple-300 hover:text-purple-800 transition-all rounded-xl bg-white/40 hover:bg-white/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 shadow-sm active:scale-90 ${isRefreshingQuote ? 'animate-spin' : ''}`}
-                            title="Refresh Quote"
+                            className={`p-3 text-sakura-600 dark:text-sakura-300 hover:text-sakura-800 transition-all rounded-xl bg-white/40 hover:bg-white/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 shadow-sm active:scale-90 ${isRefreshingQuote ? 'animate-spin' : ''}`}
+                            title="Refresh Intention"
                         >
                             <RotateLeftIcon className="w-5 h-5" />
                         </button>
@@ -214,17 +279,17 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                              navigator.clipboard.writeText(`"${currentQuote.text}" — ${currentQuote.author}`);
                              setShowShareToast(true);
                              setTimeout(() => setShowShareToast(false), 2000);
-                        }} className="p-3 text-purple-600 dark:text-purple-300 hover:text-purple-800 transition-all rounded-xl bg-white/40 hover:bg-white/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 shadow-sm active:scale-90" title="Share">
+                        }} className="p-3 text-sakura-600 dark:text-sakura-300 hover:text-sakura-800 transition-all rounded-xl bg-white/40 hover:bg-white/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 shadow-sm active:scale-90" title="Share">
                             <ShareIcon className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
                 
                 <blockquote className={`space-y-4 relative z-10 transition-all duration-300 ${isRefreshingQuote ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
-                    <p className="text-2xl font-serif text-purple-900 dark:text-purple-100 italic leading-snug">
+                    <p className="text-2xl font-serif text-sakura-900 dark:text-sakura-100 italic leading-snug">
                         "{currentQuote.text}"
                     </p>
-                    <footer className="text-sm font-sans font-bold text-purple-400 dark:text-purple-300 uppercase tracking-widest">
+                    <footer className="text-sm font-sans font-bold text-sakura-400 dark:text-sakura-300 uppercase tracking-widest">
                         — {currentQuote.author}
                     </footer>
                 </blockquote>
@@ -233,7 +298,7 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
             {showShareToast && (
                 <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800/90 backdrop-blur-md text-white py-3 px-8 rounded-full text-[10px] font-bold uppercase tracking-widest animate-pop z-50 shadow-2xl flex items-center gap-2">
                     <CheckIcon className="w-4 h-4 text-emerald-400" />
-                    Copied to clipboard
+                    Wisdom copied
                 </div>
             )}
         </div>

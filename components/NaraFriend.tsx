@@ -39,7 +39,7 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
 
     useEffect(() => {
         if (isOpen && !messages.length) {
-            setMessages([{ sender: 'ai', text: `Hi ${user?.name || 'there'}! I'm Nara. How are you feeling today?` }]);
+            setMessages([{ sender: 'ai', text: `Hi ${user?.name || 'Friend'}! I'm Nara. I can help with stories, wellness consultation, or just listen. I'm fluent in English, Indonesian, Arabic, Korean, and German. How can I support your peace today?` }]);
         }
     }, [isOpen]);
 
@@ -59,36 +59,37 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             
-            // Construct context from app state for higher accuracy
-            const latestMood = appData.moodHistory[0]?.mood || 'unknown';
+            const latestMood = appData.moodHistory[0]?.mood || 'Not Set';
             const habitStats = `${appData.habits.filter(h => h.completed).length}/${appData.habits.length}`;
             
-            // Format history for the API
-            const history = messages.map(m => ({
+            const history = currentMessages.slice(-6).map(m => ({
                 role: m.sender === 'user' ? 'user' : 'model',
                 parts: [{ text: m.text }]
             }));
 
             const responseStream = await ai.models.generateContentStream({
-                model: 'gemini-3-flash-preview',
-                contents: [
-                    ...history,
-                    { role: 'user', parts: [{ text: userText }] }
-                ],
+                model: 'gemini-flash-lite-latest',
+                contents: history,
                 config: {
                     systemInstruction: `You are Nara, a world-class wellness companion. 
-                    CONTEXT: User is ${user?.name}. Latest mood: ${latestMood}. Habits completed: ${habitStats}.
-                    GOALS: 
-                    1. Be highly responsive and empathetic.
-                    2. Accuracy: Provide wellness advice based on the user's logged data.
-                    3. Conciseness: Responses MUST be clear and succinct (max 2-3 sentences). Avoid verbosity.
-                    4. Intent: Fulfill the user's intent immediately without filler.`,
-                    maxOutputTokens: 250,
-                    thinkingConfig: { thinkingBudget: 0 } // Optimization for speed
+                    
+                    CONTEXT:
+                    - User: ${user?.name}
+                    - Current Mood: ${latestMood}
+                    - Today's Rituals: ${habitStats}
+                    
+                    RULES:
+                    1. ULTRA-FAST: Be concise. Response should be snappy and direct yet soulful.
+                    2. MULTILINGUAL: Detect user's language (EN, ID, AR, KO, DE) and reply in that EXACT language.
+                    3. PERSONA: Empathetic, calm, and insightful. No fluff.
+                    4. WELLNESS: If user is low, offer 1 quick breathing tip or grounding word.
+                    
+                    Keep initial responses under 50 words unless asked for a story.`,
+                    maxOutputTokens: 400,
+                    thinkingConfig: { thinkingBudget: 0 }
                 }
             });
 
-            // Add an empty AI message to start streaming into
             setMessages(prev => [...prev, { sender: 'ai', text: '' }]);
 
             let fullResponse = '';
@@ -108,7 +109,7 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
             }
         } catch (error) {
             console.error("Nara AI Error:", error);
-            setMessages(prev => [...prev, { sender: 'ai', text: "I'm sorry, I'm experiencing a bit of lag. Could you try again?" }]);
+            setMessages(prev => [...prev, { sender: 'ai', text: "I'm experiencing a brief moment of silence. Let's try again in a second." }]);
         } finally {
             setIsLoading(false);
         }
@@ -117,30 +118,33 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
-                <header className="p-4 border-b dark:border-slate-700 flex justify-between items-center bg-[#FFFBF9] dark:bg-slate-900">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-pink-100 dark:bg-pink-900/30 rounded-full flex items-center justify-center">
-                            <SparklesIcon className="w-5 h-5 text-pink-500" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-lg h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in border border-white/20">
+                <header className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-sakura-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <SparklesIcon className="w-6 h-6 text-white" />
                         </div>
-                        <span className="font-bold font-serif text-lg text-gray-800 dark:text-slate-100">Nara</span>
+                        <div>
+                            <h2 className="font-bold font-serif text-xl text-gray-800 dark:text-slate-100">Nara</h2>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Live Presence</span>
+                            </div>
+                        </div>
                     </div>
-                    <button 
-                        onClick={onClose}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
-                    >
-                        <BackIcon className="w-6 h-6 text-gray-500" />
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all">
+                        <BackIcon className="w-6 h-6 text-gray-400" />
                     </button>
                 </header>
 
-                <div className="flex-1 p-4 overflow-y-auto space-y-4 scrollbar-thin">
+                <div className="flex-1 p-6 overflow-y-auto space-y-6 scrollbar-thin bg-gray-50/30 dark:bg-slate-900/30">
                     {messages.map((m, i) => (
                         <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`p-4 rounded-2xl max-w-[85%] shadow-sm ${
+                            <div className={`p-4 rounded-2xl max-w-[85%] shadow-sm animate-pop ${
                                 m.sender === 'user' 
-                                ? 'bg-gradient-to-br from-pink-500 to-[#E18AAA] text-white rounded-tr-none' 
-                                : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-tl-none border border-gray-200 dark:border-slate-600'
+                                ? 'bg-sakura-500 text-white rounded-tr-none' 
+                                : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-100 rounded-tl-none border border-gray-100 dark:border-slate-600'
                             }`}>
                                 <AIMessageBody text={m.text || (isLoading && i === messages.length - 1 ? '...' : '')} />
                             </div>
@@ -149,25 +153,25 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
                     <div ref={messagesEndRef} />
                 </div>
 
-                <div className="p-4 border-t dark:border-slate-700 flex gap-2 bg-gray-50 dark:bg-slate-900">
-                    <input 
-                        type="text" 
-                        value={input} 
-                        onChange={e => setInput(e.target.value)} 
-                        onKeyDown={e => e.key === 'Enter' && handleSend()} 
-                        className="flex-1 p-3 px-5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full outline-none focus:ring-2 focus:ring-pink-300 dark:text-slate-100 transition-all"
-                        placeholder="Share your thoughts..." 
-                        disabled={isLoading}
-                    />
-                    <button 
-                        onClick={handleSend} 
-                        disabled={isLoading || !input.trim()}
-                        className="bg-[#E18AAA] hover:bg-pink-600 text-white p-3 px-6 rounded-full font-bold shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-                    >
-                        {isLoading ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                        ) : 'Send'}
-                    </button>
+                <div className="p-6 border-t dark:border-slate-700 bg-white dark:bg-slate-900">
+                    <div className="flex gap-3">
+                        <input 
+                            type="text" 
+                            value={input} 
+                            onChange={e => setInput(e.target.value)} 
+                            onKeyDown={e => e.key === 'Enter' && handleSend()} 
+                            className="flex-1 p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-sakura-300 dark:text-slate-100 transition-all"
+                            placeholder="Share your thoughts..." 
+                            disabled={isLoading}
+                        />
+                        <button 
+                            onClick={handleSend} 
+                            disabled={isLoading || !input.trim()}
+                            className="bg-sakura-500 text-white p-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            {isLoading ? '...' : 'Send'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -38,8 +38,6 @@ interface DashboardProps {
 const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journalEntries, cycleData, onNavigate, gardenXp, sleepHistory, isIslamicGuidanceOn }) => {
     const [aiInsight, setAiInsight] = useState<string | null>(null);
     const [isInsightLoading, setIsInsightLoading] = useState(false);
-    const [affirmation, setAffirmation] = useState<string | null>(null);
-    const [isAffirmationLoading, setIsAffirmationLoading] = useState(false);
     const [showShareToast, setShowShareToast] = useState(false);
     
     // State for the motivational quote
@@ -94,7 +92,7 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
         setIsInsightLoading(true);
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            const prompt = `Greeting for ${user.name} in a Zen, Sakura-themed wellness app. Status: Mood is ${summary.latestMood}, ${summary.habitRate}% habits done. Give 1 soulful greeting. Max 15 words.`;
+            const prompt = `Greeting for ${user.name} in a Zen, Sakura-themed wellness app. Status: Mood is ${summary.latestMood === 'Not Set' ? 'awaiting log' : summary.latestMood}, ${summary.habitRate}% habits done. Give 1 soulful greeting. Max 12 words.`;
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: prompt,
@@ -102,48 +100,12 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
             });
             if (response.text) setAiInsight(response.text.trim());
         } catch {
-            setAiInsight(`Peace blooms within you, ${user.name}. Let today be a gentle dance.`);
+            setAiInsight(`Peace blooms within you, ${user.name}.`);
         } finally { setIsInsightLoading(false); }
-    };
-
-    const fetchAffirmation = async () => {
-        if (!user) return;
-        setIsAffirmationLoading(true);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            
-            const isFirstUse = summary.latestMood === 'Not Set' && summary.habitRate === 0 && summary.level === 1;
-            
-            let prompt = `Generate a powerful, personalized "I AM" affirmation for ${user.name}. 
-            Context: Mood is ${summary.latestMood}, Daily Habit Completion: ${summary.habitRate}%, Garden Growth Level: ${summary.level}. 
-            Tone: Ethereal, grounded, encouraging. Length: Max 12 words. No quotes.`;
-
-            if (isFirstUse) {
-                prompt = `Generate a welcoming, soulful "I AM" affirmation for ${user.name} who is just beginning their wellness sanctuary today. 
-                Focus on the potential for growth, new beginnings, and inner peace. 
-                Tone: Ethereal, grounded, very encouraging. Length: Max 12 words. No quotes.`;
-            }
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: prompt,
-                config: { maxOutputTokens: 60 }
-            });
-            
-            if (response.text) {
-                setAffirmation(response.text.trim().replace(/^"|"$/g, ''));
-            }
-        } catch {
-            const isFirstUse = summary.latestMood === 'Not Set' && summary.habitRate === 0;
-            setAffirmation(isFirstUse 
-                ? "I am a seed of infinite potential, ready to bloom in my own time." 
-                : "I am a vessel of peace, growing stronger with every conscious breath.");
-        } finally { setIsAffirmationLoading(false); }
     };
 
     useEffect(() => {
         fetchInsight();
-        fetchAffirmation();
     }, [user?.name, summary.latestMood, summary.habitRate, summary.level]);
 
     return (
@@ -174,34 +136,6 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                 <button onClick={() => onNavigate(Tab.Habit)} className="flex-shrink-0 flex items-center gap-2 px-6 py-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-3xl text-emerald-700 dark:text-emerald-200 font-bold text-xs uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">
                     <HabitIcon className="w-5 h-5" /> Rituals
                 </button>
-            </div>
-
-            {/* AI Affirmation Section - Visually Distinct */}
-            <div className="bg-gradient-to-br from-amber-50 to-teal-50 dark:from-slate-800 dark:to-teal-950/20 rounded-[2.5rem] p-6 shadow-lg border border-amber-100/50 dark:border-slate-700 relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none">
-                    <SparklesIcon className="w-full h-full text-amber-500" />
-                </div>
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="p-3 bg-white dark:bg-slate-700 rounded-2xl shadow-sm text-amber-500 animate-pulse">
-                        <MoonStarIcon className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-[10px] font-bold font-sans text-amber-600 dark:text-amber-400 uppercase tracking-[0.2em] mb-1">Personal Affirmation</p>
-                        <div className="min-h-[1.5rem]">
-                            {isAffirmationLoading ? (
-                                <div className="flex gap-1 items-center">
-                                    <div className="w-1.5 h-1.5 bg-amber-300 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                    <div className="w-1.5 h-1.5 bg-amber-300 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                    <div className="w-1.5 h-1.5 bg-amber-300 rounded-full animate-bounce"></div>
-                                </div>
-                            ) : (
-                                <p className="text-lg font-serif font-bold text-gray-800 dark:text-slate-100 leading-tight">
-                                    {affirmation}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Summary Grid */}

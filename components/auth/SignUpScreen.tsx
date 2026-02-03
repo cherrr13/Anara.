@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { AnaraLogo, EyeIcon, EyeOffIcon, CheckIcon, XMarkIcon, WarningIcon, SparklesIcon } from '../icons';
+import { AnaraLogo, EyeIcon, EyeOffIcon, CheckIcon, XMarkIcon, WarningIcon, SparklesIcon, GoogleIcon, AppleIcon } from '../icons';
 
 interface SignUpScreenProps {
-    onSignUp: (name: string, email: string, password?: string) => void;
+    onSignUp: (name: string, email: string, password?: string, isSocial?: boolean) => void;
     onSwitchToSignIn: () => void;
 }
 
@@ -18,7 +18,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
     
     // Dynamic placeholders for multilingual welcoming
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
-    const placeholders = ["Your Name", "Nama Anda", "اسمك", "이름", "Dein Name"];
+    const placeholders = ["Alex Bloom", "Nama Anda", "اسمك", "이름", "Dein Name"];
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -50,38 +50,44 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
         setError('');
         
         if (!isReady) {
-            setError("Please finalize all spiritual security markers and ensure a valid email.");
+            setError("Please fulfill all security markers to protect your sanctuary.");
             if ('vibrate' in navigator) navigator.vibrate([40, 40, 40]);
             return;
         }
 
-        // Local check for existing user
-        const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
-        if (db.some((u: any) => u.email.toLowerCase() === email.toLowerCase().trim())) {
-            setError("This soul already exists in our sanctuary. Please sign in.");
-            if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
-            return;
-        }
-
         setIsLoading(true);
-        // Direct transition to onboarding
         setTimeout(() => {
             onSignUp(name.trim(), email.toLowerCase().trim(), password);
-        }, 800);
+        }, 1200);
+    };
+
+    const handleSocialSignUp = (provider: 'Google' | 'Apple') => {
+        setIsLoading(true);
+        setTimeout(() => {
+            const dummyEmail = provider === 'Google' ? "new.soul@gmail.com" : "new.soul@icloud.com";
+            onSignUp(provider === 'Google' ? "Alex Bloom" : "Soul Friend", dummyEmail, undefined, true);
+            setIsLoading(false);
+        }, 1500);
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6 animate-fade-in">
-            <div className="w-full max-w-sm relative">
-                <div className="text-center mb-8 relative z-10">
-                    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-3xl shadow-lg inline-block mb-4 border border-white/50 dark:border-slate-700 animate-float">
+        <div className="min-h-screen bg-gradient-to-br from-[#FFFBF9] via-[#FCE7F3] to-[#E0D9FE] dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex flex-col justify-center items-center p-6 animate-fade-in relative overflow-hidden">
+            {/* Ambient Background */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 dark:opacity-10">
+                <div className="absolute top-1/4 left-10 w-48 h-48 bg-pink-200 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-1/4 right-10 w-64 h-64 bg-indigo-200 rounded-full blur-[140px]"></div>
+            </div>
+
+            <div className="w-full max-w-sm relative z-10">
+                <div className="text-center mb-8">
+                    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-4 rounded-3xl shadow-lg inline-block mb-4 border border-white/50 dark:border-slate-700 animate-gentle-float">
                         <AnaraLogo className="h-12 w-12 text-[#F4ABC4]"/>
                     </div>
                     <h1 className="text-3xl font-bold text-[#4B4246] dark:text-slate-100 font-serif">Begin Journey</h1>
-                    <p className="text-gray-500 dark:text-slate-400 text-xs font-medium tracking-wide">Plant your seeds in a verified sanctuary.</p>
+                    <p className="text-gray-500 dark:text-slate-400 text-xs font-medium tracking-wide">"A journey of a thousand miles begins with a single step."</p>
                 </div>
 
-                <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-2xl rounded-[3rem] shadow-2xl p-8 border border-white dark:border-slate-700/50 relative z-10">
+                <div className="bg-white/70 dark:bg-slate-800/60 backdrop-blur-2xl rounded-[3rem] shadow-2xl p-8 border border-white dark:border-slate-700/50">
                     <form onSubmit={handleSignUp} className="space-y-4">
                         {error && (
                             <div className="p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-2xl text-[10px] font-bold text-center border border-rose-100 dark:border-rose-800/50 animate-pop flex items-center gap-2">
@@ -91,7 +97,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                         )}
                         
                         <div className="space-y-1">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Preferred Name</label>
+                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Your Full Name</label>
                             <input
                                 type="text"
                                 value={name}
@@ -102,7 +108,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                         </div>
 
                         <div className="space-y-1">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Email Connection</label>
+                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Sanctuary Email</label>
                             <input
                                 type="email"
                                 value={email}
@@ -113,7 +119,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                         </div>
 
                         <div className="space-y-2">
-                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Spirit Password</label>
+                            <label className="block text-gray-400 dark:text-slate-500 text-[9px] font-bold uppercase tracking-[0.2em] ml-1">Master Key</label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
@@ -132,7 +138,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                             </div>
                             
                             {/* Strength Meter */}
-                            <div className="h-1 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
                                 <div 
                                     className={`h-full transition-all duration-700 ${strength < 40 ? 'bg-rose-400' : strength < 80 ? 'bg-amber-400' : 'bg-emerald-400'}`}
                                     style={{ width: `${strength}%` }}
@@ -151,7 +157,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                             />
                         </div>
 
-                        <div className="p-4 bg-gray-50/50 dark:bg-slate-900/30 rounded-2xl border border-gray-100 dark:border-slate-700 space-y-2 shadow-inner">
+                        <div className="p-4 bg-gray-50/50 dark:bg-slate-900/30 rounded-2xl border border-gray-100 dark:border-slate-700 space-y-2">
                             {requirements.map((req, i) => (
                                 <div key={i} className="flex items-center gap-2 text-[8px] uppercase tracking-[0.15em] font-bold">
                                     <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${req.met ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-slate-700'}`}>
@@ -167,7 +173,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                         <button
                             type="submit"
                             disabled={!isReady || isLoading}
-                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-4 rounded-2xl shadow-xl hover:brightness-110 transition-all active:scale-95 text-[10px] uppercase tracking-[0.3em] disabled:opacity-40 disabled:active:scale-100 flex items-center justify-center gap-2"
+                            className="w-full bg-gradient-to-r from-[#F4ABC4] to-[#E18AAA] text-white font-bold py-5 rounded-2xl shadow-xl hover:brightness-105 transition-all active:scale-95 text-[10px] uppercase tracking-[0.3em] disabled:opacity-40 flex items-center justify-center gap-2"
                         >
                              {isLoading ? (
                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
@@ -175,25 +181,41 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onSwitchToSignIn 
                              {isLoading ? 'Cultivating...' : 'Begin Journey'}
                         </button>
                     </form>
+
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-100 dark:border-slate-700"></div>
+                        </div>
+                        <div className="relative flex justify-center text-[8px] font-bold uppercase tracking-[0.3em]">
+                            <span className="bg-white dark:bg-slate-800 px-4 text-gray-400">Social Start</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={() => handleSocialSignUp('Google')}
+                            className="flex items-center justify-center gap-2 p-4 bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                        >
+                            <GoogleIcon className="w-4 h-4" />
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 dark:text-slate-200">Google</span>
+                        </button>
+                        <button 
+                            onClick={() => handleSocialSignUp('Apple')}
+                            className="flex items-center justify-center gap-2 p-4 bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                        >
+                            <AppleIcon className="w-4 h-4" />
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 dark:text-slate-200">Apple</span>
+                        </button>
+                    </div>
                 </div>
 
                 <p className="text-center text-gray-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-8">
-                    Returning Friend?{' '}
-                    <button onClick={onSwitchToSignIn} className="text-[#E18AAA] dark:text-pink-400 hover:underline">
-                        Enter Here
+                    Already an Explorer?{' '}
+                    <button onClick={onSwitchToSignIn} className="text-[#E18AAA] dark:text-pink-400 hover:underline font-bold">
+                        Sign In
                     </button>
                 </p>
             </div>
-            <style>{`
-                @keyframes float {
-                    0% { transform: translateY(0px); }
-                    50% { transform: translateY(-10px); }
-                    100% { transform: translateY(0px); }
-                }
-                .animate-float {
-                    animation: float 4s ease-in-out infinite;
-                }
-            `}</style>
         </div>
     );
 };

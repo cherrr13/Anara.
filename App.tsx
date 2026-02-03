@@ -148,9 +148,35 @@ const App: React.FC = () => {
         else document.documentElement.classList.remove('dark');
     }, [isDarkMode]);
 
-    const handleLogin = (email: string, pass?: string) => {
+    const handleLogin = (email: string, pass?: string, isSocial: boolean = false) => {
         const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
-        const userRec = db.find((u: any) => u.email.toLowerCase() === email.toLowerCase().trim());
+        const normalizedEmail = email.toLowerCase().trim();
+        const userRec = db.find((u: any) => u.email.toLowerCase() === normalizedEmail);
+        
+        if (isSocial) {
+            // Simulated Social Login: If user doesn't exist, create them
+            if (!userRec) {
+                const newUser = { 
+                    name: email.split('@')[0], 
+                    email: normalizedEmail, 
+                    isVerified: true, 
+                    profilePicture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${normalizedEmail}` 
+                };
+                db.push(newUser);
+                localStorage.setItem('anaraAuthDB', JSON.stringify(db));
+                localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(normalizedEmail));
+                setUser({ ...newUser, isVerified: true });
+                AuthLogger.log('SIGN_IN', normalizedEmail, 'SUCCESS', { provider: 'Google/Apple' });
+                setShowOnboarding(true);
+                return true;
+            } else {
+                localStorage.setItem(SESSION_TOKEN_KEY, AuthUtils.generateToken(normalizedEmail));
+                setUser({ name: userRec.name, email: userRec.email, profilePicture: userRec.profilePicture, isVerified: true });
+                AuthLogger.log('SIGN_IN', normalizedEmail, 'SUCCESS', { provider: 'Google/Apple' });
+                return true;
+            }
+        }
+
         if (userRec && userRec.password === pass) {
             if (!userRec.isVerified) {
                 setUnverifiedEmail(userRec.email);
@@ -168,7 +194,7 @@ const App: React.FC = () => {
             return true;
         }
         AuthLogger.log('SIGN_IN', email, 'FAILURE', { reason: 'Credentials Mismatch' });
-        throw new Error("Invalid credentials.");
+        throw new Error("The sanctuary gates remained closed. Please check your credentials.");
     };
 
     const handleLogout = () => {
@@ -211,7 +237,11 @@ const App: React.FC = () => {
 
     if (!user) {
         return showSignUp ? (
-            <SignUpScreen onSignUp={(n, e, p) => {
+            <SignUpScreen onSignUp={(n, e, p, isSocial = false) => {
+                if (isSocial) {
+                    handleLogin(e, undefined, true);
+                    return;
+                }
                 const db = JSON.parse(localStorage.getItem('anaraAuthDB') || '[]');
                 const normalizedEmail = e.toLowerCase().trim();
                 if (db.some((u: any) => u.email.toLowerCase() === normalizedEmail)) {

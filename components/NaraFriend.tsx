@@ -7,10 +7,57 @@ import { SparklesIcon, BackIcon } from './icons.tsx';
 type Message = { sender: 'user' | 'ai'; text: string; };
 
 const AIMessageBody: React.FC<{ text: string }> = ({ text }) => {
+  // Enhanced parser for specific formatting requested by the user
+  const parseText = (content: string) => {
+    // Note: Underlining has been removed per latest instruction.
+    // 1. Bold: **text**
+    // 2. Italic: _text_
+    
+    const processBold = (items: React.ReactNode[]): React.ReactNode[] => {
+      const result: React.ReactNode[] = [];
+      items.forEach(item => {
+        if (typeof item !== 'string') {
+          result.push(item);
+          return;
+        }
+        const parts = item.split(/\*\*(.*?)\*\*/g);
+        parts.forEach((part, i) => {
+          result.push(i % 2 === 1 ? <strong key={i}>{part}</strong> : part);
+        });
+      });
+      return result;
+    };
+
+    const processItalic = (items: React.ReactNode[]): React.ReactNode[] => {
+      const result: React.ReactNode[] = [];
+      items.forEach(item => {
+        if (typeof item !== 'string') {
+          result.push(item);
+          return;
+        }
+        const parts = item.split(/_(.*?)_/g);
+        parts.forEach((part, i) => {
+          result.push(i % 2 === 1 ? <em key={i}>{part}</em> : part);
+        });
+      });
+      return result;
+    };
+
+    let processed: React.ReactNode[] = [content];
+    processed = processBold(processed);
+    processed = processItalic(processed);
+
+    return processed;
+  };
+
   const blocks = text.split('\n\n');
   return (
     <div className="text-sm space-y-3 leading-relaxed">
-      {blocks.map((block, i) => <p key={i} className="whitespace-pre-wrap">{block}</p>)}
+      {blocks.map((block, i) => (
+        <p key={i} className="whitespace-pre-wrap">
+          {parseText(block)}
+        </p>
+      ))}
     </div>
   );
 };
@@ -78,14 +125,22 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
                     - Current Mood: ${latestMood}
                     - Today's Rituals: ${habitStats}
                     
-                    RULES:
-                    1. ULTRA-FAST: Be concise. Response should be snappy and direct yet soulful.
-                    2. MULTILINGUAL: Detect user's language (EN, ID, AR, KO, DE) and reply in that EXACT language.
-                    3. PERSONA: Empathetic, calm, and insightful. No fluff.
-                    4. WELLNESS: If user is low, offer 1 quick breathing tip or grounding word.
+                    CORE PROTOCOL:
+                    1. CONCISE: Max 2-3 sentences.
+                    2. MIRROR & TONE: Use user's language. If venting, be comfortable/casual. If asking specifics, be clear/direct.
+                    3. BOLDING: Only bold sub-points in lists/breakdowns. Do NOT bold unnecessarily.
+                    4. UNDERLINING: Never use underlining.
+                    5. ITALICS: Use _italics_ for:
+                       - Titles of major works (books, films, art).
+                       - Words in other languages.
+                       - Names of vehicles (ships, trains, spacecraft).
+                    6. NO MODIFICATION: Do not edit user input; only respond to it.
                     
-                    Keep initial responses under 50 words unless asked for a story.`,
-                    maxOutputTokens: 400,
+                    EXAMPLES:
+                    - Q: Recommendation? A: I suggest _The Alchemist_ because it is inspiring.
+                    - Venting: A: I hear you, that sounds really rough. Let's take it slow.
+                    - List: A: **Focus on rest.** Then **hydrate.**`,
+                    maxOutputTokens: 200,
                     thinkingConfig: { thinkingBudget: 0 }
                 }
             });

@@ -1,7 +1,8 @@
+
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { MoodEntry, Habit, JournalEntry, Cycle, DayLog, Tab, User, SleepEntry } from '../types.ts';
-import { MoodIcon, JournalIcon, HabitIcon, SparklesIcon, SleepTrackerIcon, PeriodIcon, GardenIcon, ShareIcon, CheckIcon, MoonStarIcon, DzikirIcon, DuaIcon, ListenIcon, AddIcon, MenuGridIcon, CalmMoodIcon, HappyMoodIcon, TiredMoodIcon, FrustratedMoodIcon, SadMoodIcon, GratefulMoodIcon, RotateLeftIcon } from './icons.tsx';
+import { MoodIcon, JournalIcon, HabitIcon, SparklesIcon, SleepTrackerIcon, PeriodIcon, GardenIcon, ShareIcon, CheckIcon, MoonStarIcon, DzikirIcon, DuaIcon, ListenIcon, AddIcon, CalmMoodIcon, HappyMoodIcon, TiredMoodIcon, FrustratedMoodIcon, SadMoodIcon, GratefulMoodIcon, RotateLeftIcon } from './icons.tsx';
 
 const WELLNESS_QUOTES = [
     { text: "Self-care is how you take your power back.", author: "Lalah Delia" },
@@ -223,13 +224,13 @@ const HomeScreen: React.FC<DashboardProps> = ({ user, moodHistory, habits, journ
                     <p className="text-2xl font-serif text-sakura-900 dark:text-sakura-100 italic leading-snug">
                         "{currentQuote.text}"
                     </p>
-                    <footer className="text-sm font-sans font-bold text-sakura-400 dark:text-sakura-300 uppercase tracking-widest">
+                    <footer cassName="text-sm font-sans font-bold text-sakura-400 dark:text-sakura-300 uppercase tracking-widest">
                         — {currentQuote.author}
                     </footer>
                 </blockquote>
             </div>
 
-            {showShareToast && (
+            {showShareToast &&(
                 <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800/90 backdrop-blur-md text-white py-3 px-8 rounded-full text-[10px] font-bold uppercase tracking-widest animate-pop z-50 shadow-2xl flex items-center gap-2">
                     <CheckIcon className="w-4 h-4 text-emerald-400" />
                     Wisdom copied

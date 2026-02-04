@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { DashboardIcon, MoodIcon, HabitIcon, JournalIcon, PeriodIcon, GardenIcon, SettingsIcon, AnaraLogo, UserIcon, SakuraBranchIcon, SparklesIcon, MenuIcon, SleepTrackerIcon, MenuGridIcon } from './components/icons.tsx';
+import { DashboardIcon, MoodIcon, HabitIcon, JournalIcon, PeriodIcon, GardenIcon, SettingsIcon, AnaraLogo, UserIcon, SakuraBranchIcon, SparklesIcon, MenuIcon, SleepTrackerIcon } from './components/icons.tsx';
 import HomeScreen from './components/HomeScreen.tsx';
 import MoodTrackerScreen from './components/MoodTrackerScreen.tsx';
 import HabitTrackerScreen from './components/HabitTrackerScreen.tsx';

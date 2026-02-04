@@ -9,9 +9,8 @@ type Message = { sender: 'user' | 'ai'; text: string; };
 const AIMessageBody: React.FC<{ text: string }> = ({ text }) => {
   // Enhanced parser for specific formatting requested by the user
   const parseText = (content: string) => {
-    // Note: Underlining has been removed per latest instruction.
-    // 1. Bold: **text**
-    // 2. Italic: _text_
+    // 1. Remove any potential double-underscores or similar legacy markdown underlining artifacts
+    let cleanContent = content.replace(/__(.*?)__/g, '$1');
     
     const processBold = (items: React.ReactNode[]): React.ReactNode[] => {
       const result: React.ReactNode[] = [];
@@ -22,7 +21,7 @@ const AIMessageBody: React.FC<{ text: string }> = ({ text }) => {
         }
         const parts = item.split(/\*\*(.*?)\*\*/g);
         parts.forEach((part, i) => {
-          result.push(i % 2 === 1 ? <strong key={i}>{part}</strong> : part);
+          result.push(i % 2 === 1 ? <strong key={i} className="font-bold">{part}</strong> : part);
         });
       });
       return result;
@@ -37,13 +36,13 @@ const AIMessageBody: React.FC<{ text: string }> = ({ text }) => {
         }
         const parts = item.split(/_(.*?)_/g);
         parts.forEach((part, i) => {
-          result.push(i % 2 === 1 ? <em key={i}>{part}</em> : part);
+          result.push(i % 2 === 1 ? <em key={i} className="italic">{part}</em> : part);
         });
       });
       return result;
     };
 
-    let processed: React.ReactNode[] = [content];
+    let processed: React.ReactNode[] = [cleanContent];
     processed = processBold(processed);
     processed = processItalic(processed);
 
@@ -104,47 +103,48 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
         setIsLoading(true);
 
         try {
+            // Initializing new client for every request to ensure fresh API key context
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             
             const latestMood = appData.moodHistory[0]?.mood || 'Not Set';
             const habitStats = `${appData.habits.filter(h => h.completed).length}/${appData.habits.length}`;
             
-            const history = currentMessages.slice(-6).map(m => ({
+            // Limit history context for performance and relevance
+            const history = currentMessages.slice(-8).map(m => ({
                 role: m.sender === 'user' ? 'user' : 'model',
                 parts: [{ text: m.text }]
             }));
 
             const responseStream = await ai.models.generateContentStream({
-                model: 'gemini-flash-lite-latest',
+                model: 'gemini-3-pro-preview',
                 contents: history,
                 config: {
                     systemInstruction: `You are Nara, a world-class wellness companion. 
                     
-                    CONTEXT:
-                    - User: ${user?.name}
-                    - Current Mood: ${latestMood}
-                    - Today's Rituals: ${habitStats}
+                    USER CONTEXT:
+                    - Name: ${user?.name}
+                    - Latest Mood: ${latestMood}
+                    - Today's Habit Progress: ${habitStats}
                     
-                    CORE PROTOCOL:
-                    1. CONCISE: Max 2-3 sentences.
-                    2. MIRROR & TONE: Use user's language. If venting, be comfortable/casual. If asking specifics, be clear/direct.
-                    3. BOLDING: Only bold sub-points in lists/breakdowns. Do NOT bold unnecessarily.
-                    4. UNDERLINING: Never use underlining.
-                    5. ITALICS: Use _italics_ for:
-                       - Titles of major works (books, films, art).
-                       - Words in other languages.
-                       - Names of vehicles (ships, trains, spacecraft).
-                    6. NO MODIFICATION: Do not edit user input; only respond to it.
+                    FORMATTING PROTOCOL (STRICT):
+                    1. NO UNDERLINING: Never use underlines in responses.
+                    2. ITALICS: Always use _italics_ for:
+                       - Titles of major works (books like _The Alchemist_, films, artwork).
+                       - Foreign language words (e.g., _ikigai_, _shalom_).
+                       - Names of transportation vehicles (ships like _Titanic_, trains, spacecraft).
+                    3. BOLDING: Use **bold** ONLY for sub-points when an answer requires a list or breakdown. Avoid bolding single words or sentences unnecessarily.
+                    4. TONE: 
+                       - Casual/Comfortable: If the user is venting or sharing emotions.
+                       - Direct/Clear: If the user is asking a specific question or seeking advice.
+                    5. CONCISENESS: Keep responses extremely brief (2-3 sentences max) unless a longer explanation is truly necessary for health/safety.
                     
-                    EXAMPLES:
-                    - Q: Recommendation? A: I suggest _The Alchemist_ because it is inspiring.
-                    - Venting: A: I hear you, that sounds really rough. Let's take it slow.
-                    - List: A: **Focus on rest.** Then **hydrate.**`,
-                    maxOutputTokens: 200,
-                    thinkingConfig: { thinkingBudget: 0 }
+                    If user input is a word referring to itself (e.g. "Define the word peace"), respond in a suitable tone and word choice for self-reference.`,
+                    temperature: 0.7,
+                    maxOutputTokens: 500,
                 }
             });
 
+            // Add placeholder AI message
             setMessages(prev => [...prev, { sender: 'ai', text: '' }]);
 
             let fullResponse = '';
@@ -164,7 +164,14 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
             }
         } catch (error) {
             console.error("Nara AI Error:", error);
-            setMessages(prev => [...prev, { sender: 'ai', text: "I'm experiencing a brief moment of silence. Let's try again in a second." }]);
+            setMessages(prev => {
+                const updated = [...prev];
+                // Remove the empty message if it exists
+                if (updated[updated.length - 1].text === '') {
+                    updated.pop();
+                }
+                return [...updated, { sender: 'ai', text: "I'm having a quiet moment. Let's try connecting again in a moment." }];
+            });
         } finally {
             setIsLoading(false);
         }
@@ -184,7 +191,7 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
                             <h2 className="font-bold font-serif text-xl text-gray-800 dark:text-slate-100">Nara</h2>
                             <div className="flex items-center gap-1.5">
                                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Live Presence</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Powered by Pro</span>
                             </div>
                         </div>
                     </div>
@@ -216,15 +223,19 @@ const NaraFriend: React.FC<NaraFriendProps> = ({ isOpen, onClose, user, appData 
                             onChange={e => setInput(e.target.value)} 
                             onKeyDown={e => e.key === 'Enter' && handleSend()} 
                             className="flex-1 p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-sakura-300 dark:text-slate-100 transition-all"
-                            placeholder="Share your thoughts..." 
+                            placeholder="Ask me anything..." 
                             disabled={isLoading}
                         />
                         <button 
                             onClick={handleSend} 
                             disabled={isLoading || !input.trim()}
-                            className="bg-sakura-500 text-white p-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                            className="bg-sakura-500 text-white px-6 rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center"
                         >
-                            {isLoading ? '...' : 'Send'}
+                            {isLoading ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                'Send'
+                            )}
                         </button>
                     </div>
                 </div>
